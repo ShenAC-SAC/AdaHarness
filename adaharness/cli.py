@@ -7,6 +7,13 @@ from pathlib import Path
 import sys
 from typing import Any
 
+from adaharness.analysis import (
+    compute_trace_metrics,
+    diagnose_harness,
+    load_trace_events,
+    recommend_policy_changes,
+    render_analysis_report,
+)
 from adaharness.config import AdaHarnessConfig, load_config
 from adaharness.evals.runner import compare_harness_runs
 from adaharness.evals.task_schema import load_taskset
@@ -69,6 +76,13 @@ def _load_policy(path: Path) -> tuple[HarnessPolicy, dict[str, Any]]:
 
 def _load_harness_spec(path: Path) -> HarnessSpec:
     return HarnessSpec.from_dict(json.loads(path.read_text(encoding="utf-8")))
+
+
+def _load_policy_dict(path: Path | None) -> dict[str, Any] | None:
+    if path is None:
+        return None
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return data.get("policy", data)
 
 
 def _project_config_from_args(args: argparse.Namespace) -> AdaHarnessConfig | None:
@@ -198,6 +212,45 @@ def _write_calibration_artifacts(out_dir: Path, data: dict[str, Any]) -> dict[st
     paths["runs"].write_text(json.dumps(data["runs"], indent=2) + "\n", encoding="utf-8")
     paths["report"].write_text(data["report"] + "\n", encoding="utf-8")
     return {name: str(path) for name, path in paths.items()}
+
+
+def _write_analysis_sidecars(
+    report_path: Path,
+    *,
+    metrics: dict[str, Any],
+    diagnosis: list[dict[str, Any]],
+    policy_diff: list[dict[str, Any]],
+) -> None:
+    _write_json(report_path.with_suffix(".metrics.json"), metrics)
+    _write_json(report_path.with_suffix(".diagnosis.json"), {"signals": diagnosis})
+    _write_json(report_path.with_suffix(".policy-diff.json"), {"changes": policy_diff})
+
+
+def cmd_analyze(args: argparse.Namespace) -> int:
+    events = load_trace_events([Path(path) for path in args.traces])
+    metrics = compute_trace_metrics(events)
+    signals = diagnose_harness(metrics)
+    changes = recommend_policy_changes(
+        signals,
+        current_policy=_load_policy_dict(Path(args.current_policy)) if args.current_policy else None,
+    )
+    report = render_analysis_report(metrics=metrics, signals=signals, changes=changes)
+    metrics_data = metrics.to_dict()
+    diagnosis_data = [signal.to_dict() for signal in signals]
+    policy_diff_data = [change.to_dict() for change in changes]
+    if args.out:
+        report_path = Path(args.out)
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(report + "\n", encoding="utf-8")
+        _write_analysis_sidecars(
+            report_path,
+            metrics=metrics_data,
+            diagnosis=diagnosis_data,
+            policy_diff=policy_diff_data,
+        )
+    else:
+        print(report)
+    return 0
 
 
 def cmd_calibrate(args: argparse.Namespace) -> int:
@@ -443,6 +496,12 @@ def _failure_reason_lines(runs: list[dict[str, Any]], model_name: str | None = N
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="adaharness")
     subparsers = parser.add_subparsers(dest="command", required=True)
+
+    analyze = subparsers.add_parser("analyze", help="Analyze exported agent traces")
+    analyze.add_argument("--traces", nargs="+", required=True)
+    analyze.add_argument("--current-policy")
+    analyze.add_argument("--out")
+    analyze.set_defaults(func=cmd_analyze)
 
     calibrate = subparsers.add_parser("calibrate", help="Calibrate controls inside a host agent project")
     calibrate.add_argument("--config", required=True)
