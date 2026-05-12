@@ -1,130 +1,98 @@
 # Roadmap
 
-AdaHarness is moving from synthetic harness comparison toward a model-aware,
-policy-driven modular harness system. The main product path is:
+AdaHarness is now centered on:
+
+```text
+ModelProfile -> HarnessPolicy -> HarnessSpec -> RuntimeBinding -> external runtime
+```
+
+The standalone CLI remains the lab environment:
 
 ```text
 profile -> recommend -> assemble -> run -> trace -> refine
 ```
 
-`compare` remains important, but its role is to validate policy and harness
-choices, not to be the final product output.
+`ModularHarness` remains a reference runtime for validation, not the product
+boundary.
 
-The migration path is equally important:
+## Completed Foundation
 
-```text
-old profile + new profile + old policy -> migrate -> policy diff + module diff + migration plan
-```
+- Reusable `HarnessPolicy` recommendation artifacts with risk and budget inputs.
+- `HarnessPolicy -> HarnessSpec` compilation.
+- Reference `ModuleRegistry`, `HarnessBuilder`, and `ModularHarness`.
+- Policy-driven reference runtime hooks and online retry adaptation.
+- Migration reports with policy diff, module diff, and drift metrics.
+- Trace-backed offline refinement.
+- Generic external trace normalization.
 
-See `docs/use-cases.md` for the target users and application scenarios behind
-this roadmap.
+## Phase 1 Public Core API
 
-## v0.2 Policy as Primary Artifact
+Goal: let external projects import AdaHarness without shelling out to the CLI.
 
-Goal: make `HarnessPolicy` the main machine-readable output.
+- Add stable functions for loading profiles, recommending policies, compiling
+  specs, loading/saving artifacts, and building the reference harness.
+- Keep CLI as a wrapper over the same API.
+- Document embedded-library usage.
 
-- Keep `ModelProfile` as the diagnostic input.
-- Make `recommend --out` write a reusable `policy.json`.
-- Include risk and budget inputs in recommendation.
-- Keep reports as explanation, not a substitute for policy.
+Acceptance: an external Python file can import AdaHarness and produce
+`HarnessPolicy` and `HarnessSpec` without invoking `adaharness`.
 
-Acceptance: `adaharness recommend --profile runs/profile.json --out runs/policy.json`
-produces a policy that later commands can consume.
+## Phase 2 Runtime Adapter Contract
 
-## v0.3 HarnessSpec Compiler
+Goal: make external runtime integration explicit.
 
-Goal: compile `HarnessPolicy` into runtime module configuration.
+- Add `RuntimeAdapter`, `AdapterCapabilities`, and `RuntimeBinding`.
+- Add a generic binding adapter that maps `HarnessSpec` controls to required
+  hooks and reports unsupported controls.
+- Do not mutate LangGraph/OpenAI Agents SDK objects yet.
 
-- Add `ModuleSpec`.
-- Add `HarnessSpec`.
-- Add `compile_policy_to_spec()`.
-- Add `assemble --policy ... --out ...`.
-- Output enabled and disabled modules.
+Acceptance: `bind(spec)` produces a machine-readable binding report explaining
+which hooks a target runtime must expose.
 
-Acceptance: `adaharness assemble --policy runs/policy.json --out runs/harness-spec.json`
-produces a concrete module spec.
+## Phase 3 HarnessSpec Contract Upgrade
 
-## v0.4 Module Registry and Harness Builder
+Goal: make `HarnessSpec` a cross-runtime control contract, not only an internal
+module list.
 
-Goal: build a runtime harness from `HarnessSpec`.
+- Add `requirements`, `adapter_hints`, and top-level `source_policy`.
+- Add helpers such as `get_module()` and requirement checks.
+- Preserve backward-compatible loading for existing specs.
 
-- Add `modules/` with planner, verifier, retry controller, context manager,
-  budget guard, tool gatekeeper, tool executor, and trace modules.
-- Add a module registry.
-- Add a `ModularHarness` builder.
-- Keep `TraceModule`, `BudgetGuardModule`, and `ToolExecutorModule` as core
-  modules.
+Acceptance: adapters can inspect a spec and decide whether a runtime supports
+it before execution.
 
-Acceptance: `adaharness run --harness-spec runs/harness-spec.json --task ...`
-records which modules were enabled.
+## Phase 4 Project Configuration
 
-## v0.5 Policy-Driven Runtime Behavior
+Goal: remove repeated provider and credential wiring from CLI arguments.
 
-Goal: different policies create different runtime behavior, not just different
-metadata.
+- Add `.env` loading for secrets.
+- Add `adaharness.toml` for providers, models, defaults, tasksets, and runtime
+  preferences.
+- Add `config inspect` and `config validate`.
 
-- Planner module creates planning events.
-- Verifier module checks before final output.
-- Retry controller retries on verification or tool failure.
-- Tool gatekeeper checks tool calls before execution.
-- Budget guard limits steps, tool calls, and token use.
+Acceptance: `adaharness profile --config adaharness.toml --model qwen-local`
+resolves provider, base URL, taskset, risk, and budget.
 
-Acceptance: bare and strong specs produce visibly different traces on the same
-task.
+## Phase 5 Live Profiling
 
-## v0.6 Profiler-Driven Policy Generation
+Goal: make model profiles come from real model runs when explicitly requested.
 
-Goal: generate different policies for different model profiles.
+- Keep default profiling synthetic.
+- Add `profile --live` that builds a `ModelClient`.
+- Score profiler task traces deterministically.
+- Never call a real provider without `--live`.
 
-- Weak models receive stronger planner, verifier, retry, and gatekeeping modules.
-- Strong models receive lighter guardrails.
-- Risk and budget affect verifier strength, retry depth, and autonomy budget.
+Acceptance: `profile --live --provider mock` exercises the live path in CI, and
+real providers require explicit configuration.
 
-Acceptance: weak and strong profiles produce different policy JSON and different
-harness specs.
+## Phase 6 Reference Runtime Behavior
 
-## v0.7 Harness Migration and Policy Diff
+Goal: make the reference runtime useful as a validation lab.
 
-Goal: help users change models without carrying the wrong harness forward.
+- Make planner alter messages.
+- Add deterministic fake tools.
+- Make verifier use task checks and traces.
+- Enforce budget limits.
+- Make retry and recovery change the next attempt.
 
-- Add policy diff and module diff reporting.
-- Add migration metrics such as harness drift, policy delta, underconstraint
-  risk, and overconstraint penalty.
-- Add `migrate` to compare old and new model profiles against an existing
-  policy.
-- Recommend whether to weaken, strengthen, or keep each major harness module.
-
-Acceptance: `adaharness migrate --from-profile ... --to-profile ... --from-policy ...`
-produces a migration report with policy and module changes.
-
-## v0.8 Trace-Backed Policy Refinement
-
-Goal: use completed runs to propose improved policies offline.
-
-```text
-run with policy -> collect trace -> analyze failure modes -> propose policy -> assemble spec
-```
-
-This is still offline adaptation, not online mutation during a run.
-
-## v0.9 External Trace Import
-
-Goal: evaluate external agent runtimes without executing them directly.
-
-- Add `ExternalTraceAdapter`.
-- Normalize external traces to `RunTrace`.
-- Score imported traces and generate harness recommendations.
-
-Non-goal: direct LangGraph, OpenAI Agents SDK, or Claude Agent SDK execution.
-
-## v0.10 Online Adaptive Modules
-
-Goal: update active modules during runtime.
-
-- Verification failures can strengthen verifier modules.
-- Tool failures can tighten tool gatekeeping.
-- Budget pressure can reduce planning depth.
-- Stable execution can expand autonomy budget.
-
-Acceptance: `policy_change` events affect subsequent runtime events, not only
-post-run reporting.
+Acceptance: reference traces show behavioral differences beyond trace markers.

@@ -1,8 +1,25 @@
 # Architecture
 
-AdaHarness is organized as a policy-driven modular harness system rather than a
-full agent framework. Evaluation is a means to generate and validate policy, not
-the final product boundary.
+AdaHarness is organized as a harness policy/compiler layer rather than a full
+agent framework. It is the control plane that decides which harness controls a
+model should receive. The user's agent runtime remains the data plane that
+executes model calls, tools, state, streaming, and approvals.
+
+The product flow is:
+
+```text
+ModelProfile -> HarnessPolicy -> HarnessSpec -> RuntimeBinding -> external runtime
+```
+
+The reference runtime flow is:
+
+```text
+ModelProfile -> HarnessPolicy -> HarnessSpec -> ModularHarness -> RunTrace
+```
+
+`ModularHarness` is a validation runtime for local experiments and CI. It is not
+the expected production runtime for users who already have LangGraph, OpenAI
+Agents SDK, Claude Agent SDK, or a custom agent loop.
 
 ## Module Boundaries
 
@@ -10,31 +27,26 @@ the final product boundary.
   structured responses, and provider adapter boundaries.
 - `adaharness/profiler/` produces a `ModelProfile` describing agent-relevant
   capability dimensions.
-- `adaharness/policies/` maps a profile to a `HarnessPolicy`.
-- `adaharness/specs/` will compile `HarnessPolicy` into runtime-facing
-  `HarnessSpec` module configuration.
-- `adaharness/modules/` will implement planner, verifier, retry, budget,
-  context, tool, and trace modules.
-- `adaharness/harnesses/` defines fixed presets and builds the adaptive harness.
-- `adaharness/harnesses/runtime.py` defines executable runtime strategies for
-  those presets without turning preset metadata into mutable execution state.
+- `adaharness/policies/` maps a profile to `HarnessPolicy`, migration reports,
+  and trace-backed refinements.
+- `adaharness/specs/` compiles `HarnessPolicy` into runtime-neutral
+  `HarnessSpec` controls.
+- `adaharness/modules/` implements reference planner, verifier, retry, budget,
+  context, tool, and trace controls.
+- `adaharness/harnesses/` contains preset harnesses and the reference
+  `ModularHarness`.
+- `adaharness/integrations/` normalizes external traces without executing
+  external runtimes.
 - `adaharness/evals/` loads task fixtures, estimates task success, and computes
   comparative metrics from run results.
 - `adaharness/runtime/` contains state, budget, result, and tracing primitives.
-- `adaharness/cli.py` wires the pipeline into `profile`, `recommend`, `compare`,
-  and `report` commands.
+- Future `adaharness/adapters/` will bind specs to existing runtimes.
+- `adaharness/cli.py` wires the standalone lab commands.
 
 ## Current Runtime Shape
 
-Version 0.1 intentionally uses synthetic profiling and deterministic evaluation
-logic. This keeps the harness-selection loop testable before introducing real
-model APIs, tool execution, or online policy updates.
-
-The intended product data flow is:
-
-```text
-ModelProfile -> HarnessPolicy -> HarnessSpec -> ModularHarness -> RunTrace -> PolicyRefinement
-```
+Current profiling remains deterministic. Provider clients exist, and `run` can
+call them through `ModelClient`, but live profiling is still a gap.
 
 The provider boundary is separate:
 
@@ -51,11 +63,13 @@ LM Studio, and similar endpoints should use the `openai-compatible` boundary
 when they expose that protocol. Native provider adapters are reserved for real
 protocol differences, not marketing names.
 
-The runtime data flow is:
+The reference runtime data flow is:
 
 ```text
 EvalTask + HarnessPolicy + ModelClient -> HarnessRuntime -> RunResult + RunTrace
 ```
 
-Metrics are aggregates over `RunResult`, and reports should increasingly explain
-their scores from `RunTrace` evidence rather than opaque estimates.
+Metrics are aggregates over `RunResult`, and reports should explain their scores
+from `RunTrace` evidence where possible.
+
+See `docs/concepts/policy-layer.md` for the control-plane boundary.

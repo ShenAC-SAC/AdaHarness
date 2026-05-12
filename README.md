@@ -110,8 +110,8 @@ Anthropic are useful strong-model baselines, but AdaHarness is especially aimed
 at comparing harness choices for open, local, and OpenAI-compatible models where
 the right orchestration layer may have a larger effect.
 
-See `docs/use-cases.md` for the target users, application scenarios, migration
-workflow, and artifact model.
+See `docs/concepts/policy-layer.md` for the control-plane boundary and
+`docs/use-cases.md` for target users, migration workflows, and artifacts.
 
 ## Why
 

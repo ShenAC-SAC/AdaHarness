@@ -27,6 +27,9 @@ most complex one.
 its lift is large enough to justify its tax. If two harnesses have similar
 success rates, prefer the one with the lower tax and simpler policy.
 
+This is the minimal effective harness rule: choose the lightest control plan
+that satisfies task performance, risk, and budget requirements.
+
 Example report:
 
 ```bash
