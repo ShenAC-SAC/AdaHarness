@@ -137,9 +137,10 @@ class CliTests(unittest.TestCase):
             file_data = json.loads(spec_path.read_text(encoding="utf-8"))
             self.assertEqual(exit_code, 0)
             self.assertEqual(stdout_data, file_data)
-            self.assertEqual(file_data["schema_version"], "0.4")
+            self.assertEqual(file_data["schema_version"], "0.5")
             self.assertEqual(file_data["name"], "test_spec")
             self.assertIn("planner", file_data["enabled_modules"])
+            self.assertIn("planner", file_data["enabled_controllers"])
             self.assertIn("requirements", file_data)
             self.assertEqual(file_data["metadata"]["recommendation"]["model_name"], "assemble-model")
 

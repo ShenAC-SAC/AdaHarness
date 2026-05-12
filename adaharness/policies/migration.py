@@ -21,10 +21,11 @@ class MigrationReport:
     from_spec: HarnessSpec
     recommended_spec: HarnessSpec
     policy_diff: tuple[dict[str, Any], ...]
+    controller_diff: dict[str, Any]
     module_diff: dict[str, Any]
     metrics: dict[str, float]
     recommendation: tuple[str, ...]
-    schema_version: str = "0.7"
+    schema_version: str = "0.8"
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -38,6 +39,7 @@ class MigrationReport:
             "from_spec": self.from_spec.to_dict(),
             "recommended_spec": self.recommended_spec.to_dict(),
             "policy_diff": list(self.policy_diff),
+            "controller_diff": self.controller_diff,
             "module_diff": self.module_diff,
             "metrics": self.metrics,
             "recommendation": list(self.recommendation),
@@ -57,8 +59,9 @@ def build_migration_report(
     from_spec = compile_policy_to_spec(from_policy, name=f"{from_profile.model_name}_current")
     recommended_spec = compile_policy_to_spec(recommended_policy, name=f"{to_profile.model_name}_recommended")
     policy_diff = tuple(diff_policies(from_policy, recommended_policy))
+    controller_diff = diff_controllers(from_spec, recommended_spec)
     module_diff = diff_modules(from_spec, recommended_spec)
-    metrics = _migration_metrics(from_profile, to_profile, from_spec, recommended_spec, policy_diff)
+    metrics = _migration_metrics(from_profile, to_profile, from_spec, recommended_spec, policy_diff, controller_diff)
     return MigrationReport(
         from_model=from_profile.model_name,
         to_model=to_profile.model_name,
@@ -69,9 +72,10 @@ def build_migration_report(
         from_spec=from_spec,
         recommended_spec=recommended_spec,
         policy_diff=policy_diff,
+        controller_diff=controller_diff,
         module_diff=module_diff,
         metrics=metrics,
-        recommendation=_migration_recommendations(metrics, module_diff),
+        recommendation=_migration_recommendations(metrics, controller_diff),
     )
 
 
@@ -116,17 +120,54 @@ def diff_modules(from_spec: HarnessSpec, to_spec: HarnessSpec) -> dict[str, Any]
     }
 
 
+def diff_controllers(from_spec: HarnessSpec, to_spec: HarnessSpec) -> dict[str, Any]:
+    before = {controller.name: controller for controller in from_spec.controllers}
+    after = {controller.name: controller for controller in to_spec.controllers}
+    names = sorted(set(before) | set(after))
+    enabled = []
+    disabled = []
+    changed = []
+    for name in names:
+        old = before.get(name)
+        new = after.get(name)
+        if old is None or new is None:
+            continue
+        if not old.enabled and new.enabled:
+            enabled.append(name)
+        elif old.enabled and not new.enabled:
+            disabled.append(name)
+        elif old.enabled and new.enabled and old.to_dict() != new.to_dict():
+            changed.append(
+                {
+                    "controller": name,
+                    "from": old.to_dict(),
+                    "to": new.to_dict(),
+                }
+            )
+    return {
+        "enabled": enabled,
+        "disabled": disabled,
+        "changed": changed,
+    }
+
+
 def _migration_metrics(
     from_profile: ModelProfile,
     to_profile: ModelProfile,
     from_spec: HarnessSpec,
     to_spec: HarnessSpec,
     policy_diff: tuple[dict[str, Any], ...],
+    controller_diff: dict[str, Any],
 ) -> dict[str, float]:
     old_control = _control_weight(from_spec)
     new_control = _control_weight(to_spec)
     capability_change = to_profile.capability_average - from_profile.capability_average
-    policy_delta = len(policy_diff) + len(set(from_spec.enabled_modules) ^ set(to_spec.enabled_modules))
+    controller_delta = (
+        len(controller_diff["enabled"])
+        + len(controller_diff["disabled"])
+        + len(controller_diff["changed"])
+    )
+    policy_delta = len(policy_diff) + controller_delta
     return {
         "policy_delta": float(policy_delta),
         "harness_drift_score": min(1.0, policy_delta / 12.0),
@@ -136,24 +177,24 @@ def _migration_metrics(
 
 
 def _control_weight(spec: HarnessSpec) -> float:
-    enabled = [module for module in spec.modules if module.enabled]
-    if not spec.modules:
+    enabled = [controller for controller in spec.controllers if controller.enabled]
+    if not spec.controllers:
         return 0.0
-    return len(enabled) / len(spec.modules)
+    return len(enabled) / len(spec.controllers)
 
 
-def _migration_recommendations(metrics: dict[str, float], module_diff: dict[str, Any]) -> tuple[str, ...]:
+def _migration_recommendations(metrics: dict[str, float], controller_diff: dict[str, Any]) -> tuple[str, ...]:
     recommendations = []
     if metrics["harness_drift_score"] > 0.4:
-        recommendations.append("Review policy and module diffs before migrating.")
+        recommendations.append("Review policy and controller diffs before migrating.")
     if metrics["overconstraint_penalty"] > 0.0:
         recommendations.append("The old harness may over-constrain the replacement model.")
     if metrics["underconstraint_risk"] > 0.0:
         recommendations.append("The replacement model may need stronger controls than the old harness.")
-    if module_diff["enabled"]:
-        recommendations.append("Enable newly recommended modules before rollout.")
-    if module_diff["disabled"]:
-        recommendations.append("Disable modules that no longer justify their harness tax.")
+    if controller_diff["enabled"] or controller_diff["changed"]:
+        recommendations.append("Apply newly recommended controller levels before rollout.")
+    if controller_diff["disabled"]:
+        recommendations.append("Reduce controls that no longer justify their harness tax.")
     if not recommendations:
         recommendations.append("The existing harness is close to the recommended policy.")
     return tuple(recommendations)

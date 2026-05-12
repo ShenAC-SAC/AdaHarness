@@ -11,7 +11,7 @@ class MigrationTests(unittest.TestCase):
 
         self.assertEqual(report, [])
 
-    def test_migration_report_includes_policy_and_module_diffs(self) -> None:
+    def test_migration_report_includes_policy_and_controller_diffs(self) -> None:
         old_profile = ModelProfile(
             model_name="old-small",
             planning=0.35,
@@ -40,10 +40,11 @@ class MigrationTests(unittest.TestCase):
         )
         data = report.to_dict()
 
-        self.assertEqual(data["schema_version"], "0.7")
+        self.assertEqual(data["schema_version"], "0.8")
         self.assertEqual(data["from_model"], "old-small")
         self.assertEqual(data["to_model"], "new-strong")
         self.assertGreater(data["metrics"]["policy_delta"], 0)
         self.assertGreater(data["metrics"]["harness_drift_score"], 0)
         self.assertTrue(data["policy_diff"])
+        self.assertTrue(data["controller_diff"]["disabled"])
         self.assertTrue(data["module_diff"]["disabled"])

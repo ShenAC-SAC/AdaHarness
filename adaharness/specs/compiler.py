@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from adaharness.policies.schema import HarnessPolicy
-from adaharness.specs.harness_spec import HarnessSpec, ModuleSpec
+from adaharness.specs.harness_spec import ControllerSpec, HarnessSpec, ModuleSpec
 
 
 def compile_policy_to_spec(
@@ -25,6 +25,7 @@ def compile_policy_to_spec(
         _recovery(policy),
         _subagent_router(policy),
     ]
+    controllers = _controllers_for(policy)
     spec_metadata = {
         "source_policy": policy.to_dict(),
         **(metadata or {}),
@@ -32,46 +33,237 @@ def compile_policy_to_spec(
     return HarnessSpec(
         name=name,
         modules=tuple(modules),
+        controllers=tuple(controllers),
         metadata=spec_metadata,
         source_policy=policy.to_dict(),
-        requirements=_requirements_for(modules),
-        adapter_hints=_adapter_hints_for(modules),
+        requirements=_requirements_for(controllers),
+        adapter_hints=_adapter_hints_for(controllers),
     )
 
 
-def _requirements_for(modules: list[ModuleSpec]) -> dict[str, bool]:
-    enabled = {module.name for module in modules if module.enabled}
+def _requirements_for(controllers: list[ControllerSpec]) -> dict[str, bool]:
+    enabled = {controller.name for controller in controllers if controller.enabled}
     return {
-        "supports_pre_model_hook": bool(
-            enabled & {"planner", "context_manager", "budget_guard"}
-        ),
+        "supports_pre_model_hook": bool(enabled & {"planner", "context", "budget", "autonomy"}),
         "supports_post_model_hook": "verifier" in enabled,
-        "supports_tool_interception": "tool_gatekeeper" in enabled,
-        "supports_tool_execution": "tool_executor" in enabled,
-        "supports_retry_loop": bool(enabled & {"retry_controller", "recovery"}),
-        "supports_subagents": "subagent_router" in enabled,
-        "supports_trace_export": "trace" in enabled,
+        "supports_tool_interception": "tool_control" in enabled,
+        "supports_tool_execution": "tool_execution" in enabled,
+        "supports_retry_loop": bool(enabled & {"retry", "recovery"}),
+        "supports_subagents": "delegation" in enabled,
+        "supports_trace_export": "tracing" in enabled,
     }
 
 
-def _adapter_hints_for(modules: list[ModuleSpec]) -> dict[str, Any]:
+def _adapter_hints_for(controllers: list[ControllerSpec]) -> dict[str, Any]:
     hooks = []
-    if any(module.enabled and module.name in {"planner", "context_manager", "budget_guard"} for module in modules):
+    enabled = {controller.name for controller in controllers if controller.enabled}
+    if enabled & {"planner", "context", "budget", "autonomy"}:
         hooks.append("before_model_call")
-    if any(module.enabled and module.name == "verifier" for module in modules):
+    if "verifier" in enabled:
         hooks.append("after_model_call")
-    if any(module.enabled and module.name == "tool_gatekeeper" for module in modules):
+    if "tool_control" in enabled:
         hooks.append("before_tool_call")
-    if any(module.enabled and module.name == "tool_executor" for module in modules):
+    if "tool_execution" in enabled:
         hooks.append("tool_execution")
-    if any(module.enabled and module.name in {"retry_controller", "recovery"} for module in modules):
+    if enabled & {"retry", "recovery"}:
         hooks.append("on_retry")
-    if any(module.enabled and module.name == "trace" for module in modules):
+    if "tracing" in enabled:
         hooks.append("trace_export")
     return {
         "preferred_integration": "middleware",
         "required_hooks": hooks,
     }
+
+
+def _controllers_for(policy: HarnessPolicy) -> list[ControllerSpec]:
+    return [
+        _tracing_controller(),
+        _budget_controller(policy),
+        _tool_execution_controller(),
+        _planner_controller(policy),
+        _context_controller(policy),
+        _tool_control_controller(policy),
+        _verifier_controller(policy),
+        _retry_controller_spec(policy),
+        _recovery_controller(policy),
+        _delegation_controller(policy),
+        _autonomy_controller(policy),
+    ]
+
+
+def _tracing_controller() -> ControllerSpec:
+    return ControllerSpec(
+        name="tracing",
+        level="full",
+        mode="event_log",
+        authority="runtime",
+        config={"record_events": True, "record_policy": True},
+    )
+
+
+def _budget_controller(policy: HarnessPolicy) -> ControllerSpec:
+    limits = _budget_limits(policy)
+    return ControllerSpec(
+        name="budget",
+        level=policy.autonomy_budget,
+        mode="guardrail",
+        authority="runtime",
+        budget=limits,
+        config={"enforcement": "bounded"},
+    )
+
+
+def _tool_execution_controller() -> ControllerSpec:
+    return ControllerSpec(
+        name="tool_execution",
+        level="deterministic",
+        mode="reference_tools",
+        authority="runtime",
+        config={"toolset": "deterministic"},
+    )
+
+
+def _planner_controller(policy: HarnessPolicy) -> ControllerSpec:
+    level = {
+        "none": "off",
+        "light": "conditional",
+        "explicit": "explicit",
+        "strict": "strict",
+    }[policy.planning_depth]
+    authority = {
+        "none": "model_led",
+        "light": "model_led",
+        "explicit": "shared",
+        "strict": "harness_led",
+    }[policy.planning_depth]
+    budgets = {
+        "none": {"max_plan_steps": 0, "max_replans": 0},
+        "light": {"max_plan_steps": 4, "max_replans": 1},
+        "explicit": {"max_plan_steps": 6, "max_replans": 1},
+        "strict": {"max_plan_steps": 8, "max_replans": 2},
+    }
+    triggers = {
+        "none": (),
+        "light": ("task_complexity_at_least_medium", "risk_at_least_medium"),
+        "explicit": ("before_execution",),
+        "strict": ("before_execution", "tool_failure", "verification_failure"),
+    }
+    return ControllerSpec(
+        name="planner",
+        enabled=policy.planning_depth != "none",
+        level=level,
+        mode=level,
+        authority=authority,
+        triggers=triggers[policy.planning_depth],
+        budget=budgets[policy.planning_depth],
+        config={"plan_format": "checklist" if policy.planning_depth == "light" else "step_schema"},
+        escalation={"on_repeated_failure": "strict"} if policy.planning_depth == "light" else {},
+    )
+
+
+def _context_controller(policy: HarnessPolicy) -> ControllerSpec:
+    return ControllerSpec(
+        name="context",
+        enabled=policy.context_policy != "raw",
+        level=policy.context_policy,
+        mode=policy.context_policy,
+        authority="runtime",
+        triggers=("before_model_call",) if policy.context_policy != "raw" else (),
+        config={"strategy": policy.context_policy},
+    )
+
+
+def _tool_control_controller(policy: HarnessPolicy) -> ControllerSpec:
+    return ControllerSpec(
+        name="tool_control",
+        enabled=policy.tool_gatekeeping != "none",
+        level=policy.tool_gatekeeping if policy.tool_gatekeeping != "none" else "off",
+        mode="precheck" if policy.tool_gatekeeping == "moderate" else "pre_and_postcheck",
+        authority="runtime",
+        triggers=("before_tool_call", "after_tool_call") if policy.tool_gatekeeping == "strict" else ("before_tool_call",),
+        config={"strictness": policy.tool_gatekeeping},
+        escalation={"on_repeated_tool_failure": "strict"} if policy.tool_gatekeeping == "moderate" else {},
+    )
+
+
+def _verifier_controller(policy: HarnessPolicy) -> ControllerSpec:
+    checkpoints = {
+        "none": (),
+        "selective": ("after_tool_call", "before_final"),
+        "always": ("after_plan", "after_tool_call", "before_final"),
+    }
+    return ControllerSpec(
+        name="verifier",
+        enabled=policy.verifier_strength != "none",
+        level=policy.verifier_strength if policy.verifier_strength != "none" else "off",
+        mode="checkpoint",
+        authority="runtime",
+        triggers=checkpoints[policy.verifier_strength],
+        config={"checkpoints": list(checkpoints[policy.verifier_strength])},
+        escalation={"on_repeated_failure": "always"} if policy.verifier_strength == "selective" else {},
+    )
+
+
+def _retry_controller_spec(policy: HarnessPolicy) -> ControllerSpec:
+    max_retries = {
+        "none": 0,
+        "bounded": 2,
+        "aggressive": 4,
+    }
+    enabled = policy.retry_policy != "none"
+    return ControllerSpec(
+        name="retry",
+        enabled=enabled,
+        level=policy.retry_policy,
+        mode="failure_based",
+        authority="runtime",
+        triggers=("tool_failure", "verification_failure") if enabled else (),
+        budget={"max_retries": max_retries[policy.retry_policy]},
+        config={"retry_on": ["tool_failure", "verification_failure"] if enabled else []},
+        escalation={"after_exhausted_retries": "raise_control_level"} if policy.retry_policy == "aggressive" else {},
+    )
+
+
+def _recovery_controller(policy: HarnessPolicy) -> ControllerSpec:
+    enabled = policy.retry_policy != "none" or policy.verifier_strength != "none"
+    return ControllerSpec(
+        name="recovery",
+        enabled=enabled,
+        level="guided" if enabled else "off",
+        mode="failure_repair",
+        authority="runtime",
+        triggers=("tool_failure", "format_failure", "verification_failure") if enabled else (),
+        config={"recover_from": ["tool_failure", "format_failure", "verification_failure"] if enabled else []},
+    )
+
+
+def _delegation_controller(policy: HarnessPolicy) -> ControllerSpec:
+    enabled = policy.subagent_policy != "disabled"
+    return ControllerSpec(
+        name="delegation",
+        enabled=enabled,
+        level=policy.subagent_policy,
+        mode="router",
+        authority="runtime",
+        triggers=("complex_subtask",) if enabled else (),
+        config={"policy": policy.subagent_policy},
+    )
+
+
+def _autonomy_controller(policy: HarnessPolicy) -> ControllerSpec:
+    windows = {
+        "small": 1,
+        "medium": 3,
+        "large": 5,
+    }
+    return ControllerSpec(
+        name="autonomy",
+        level=policy.autonomy_budget,
+        mode="step_window",
+        authority="runtime",
+        budget={"max_consecutive_model_steps": windows[policy.autonomy_budget]},
+        config={"budget": policy.autonomy_budget},
+    )
 
 
 def _trace_module() -> ModuleSpec:
@@ -85,16 +277,12 @@ def _trace_module() -> ModuleSpec:
 
 
 def _budget_guard(policy: HarnessPolicy) -> ModuleSpec:
-    limits = {
-        "small": {"max_steps": 6, "max_tool_calls": 3, "max_retries": 1},
-        "medium": {"max_steps": 10, "max_tool_calls": 6, "max_retries": 2},
-        "large": {"max_steps": 16, "max_tool_calls": 10, "max_retries": 3},
-    }
+    limits = _budget_limits(policy)
     return ModuleSpec(
         name="budget_guard",
         config={
             "autonomy_budget": policy.autonomy_budget,
-            **limits[policy.autonomy_budget],
+            **limits,
         },
     )
 
@@ -203,3 +391,12 @@ def _subagent_router(policy: HarnessPolicy) -> ModuleSpec:
             "policy": policy.subagent_policy,
         },
     )
+
+
+def _budget_limits(policy: HarnessPolicy) -> dict[str, int]:
+    limits = {
+        "small": {"max_steps": 6, "max_tool_calls": 3, "max_retries": 1},
+        "medium": {"max_steps": 10, "max_tool_calls": 6, "max_retries": 2},
+        "large": {"max_steps": 16, "max_tool_calls": 10, "max_retries": 3},
+    }
+    return limits[policy.autonomy_budget]

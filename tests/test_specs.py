@@ -1,19 +1,22 @@
 import unittest
 
-from adaharness.policies.presets import BARE_POLICY, STRONG_POLICY, STRUCTURED_POLICY
-from adaharness.specs import HarnessSpec, compile_policy_to_spec
+from adaharness.policies.presets import BARE_POLICY, LIGHT_POLICY, STRONG_POLICY, STRUCTURED_POLICY
+from adaharness.specs import ControllerSpec, HarnessSpec, compile_policy_to_spec
 
 
 class HarnessSpecTests(unittest.TestCase):
     def test_compile_policy_includes_core_modules(self) -> None:
         spec = compile_policy_to_spec(BARE_POLICY)
 
-        self.assertEqual(spec.schema_version, "0.4")
+        self.assertEqual(spec.schema_version, "0.5")
         self.assertIn("trace", spec.enabled_modules)
         self.assertIn("budget_guard", spec.enabled_modules)
         self.assertIn("tool_executor", spec.enabled_modules)
         self.assertIn("planner", spec.disabled_modules)
         self.assertIn("verifier", spec.disabled_modules)
+        self.assertIn("tracing", spec.enabled_controllers)
+        self.assertIn("budget", spec.enabled_controllers)
+        self.assertIn("planner", spec.disabled_controllers)
         self.assertTrue(spec.requires("supports_trace_export"))
 
     def test_compile_structured_policy_enables_selected_modules(self) -> None:
@@ -24,19 +27,37 @@ class HarnessSpecTests(unittest.TestCase):
         self.assertIn("verifier", spec.enabled_modules)
         self.assertIn("retry_controller", spec.enabled_modules)
         self.assertIn("context_manager", spec.enabled_modules)
+        self.assertIn("planner", spec.enabled_controllers)
+        self.assertIn("tool_control", spec.enabled_controllers)
+        self.assertIn("retry", spec.enabled_controllers)
 
     def test_strong_policy_compiles_module_config(self) -> None:
         spec = compile_policy_to_spec(STRONG_POLICY, name="strong_spec")
         data = spec.to_dict()
         planner = next(module for module in data["modules"] if module["name"] == "planner")
         verifier = next(module for module in data["modules"] if module["name"] == "verifier")
+        planner_controller = next(controller for controller in data["controllers"] if controller["name"] == "planner")
+        verifier_controller = next(controller for controller in data["controllers"] if controller["name"] == "verifier")
 
         self.assertEqual(data["name"], "strong_spec")
         self.assertEqual(data["source_policy"], STRONG_POLICY.to_dict())
         self.assertIn("requirements", data)
         self.assertIn("adapter_hints", data)
+        self.assertIn("enabled_controllers", data)
         self.assertEqual(planner["config"]["depth"], "strict")
         self.assertEqual(verifier["config"]["strength"], "always")
+        self.assertEqual(planner_controller["level"], "strict")
+        self.assertEqual(planner_controller["authority"], "harness_led")
+        self.assertEqual(verifier_controller["level"], "always")
+
+    def test_light_policy_compiles_conditional_planner_controller(self) -> None:
+        spec = compile_policy_to_spec(LIGHT_POLICY)
+        planner = spec.get_controller("planner")
+
+        self.assertIsInstance(planner, ControllerSpec)
+        self.assertEqual(planner.level, "conditional")
+        self.assertEqual(planner.authority, "model_led")
+        self.assertIn("task_complexity_at_least_medium", planner.triggers)
 
     def test_spec_round_trips_from_dict(self) -> None:
         spec = compile_policy_to_spec(STRUCTURED_POLICY)
@@ -52,7 +73,11 @@ class HarnessSpecTests(unittest.TestCase):
         data.pop("source_policy")
         data.pop("requirements")
         data.pop("adapter_hints")
+        data.pop("controllers")
+        data.pop("enabled_controllers")
+        data.pop("disabled_controllers")
 
         restored = HarnessSpec.from_dict(data)
 
         self.assertEqual(restored.source_policy, STRUCTURED_POLICY.to_dict())
+        self.assertIn("planner", restored.enabled_controllers)
