@@ -74,3 +74,24 @@ class PolicyGeneratorTests(unittest.TestCase):
         self.assertEqual(recommendation.policy.planning_depth, "light")
         self.assertEqual(recommendation.policy.retry_policy, "none")
         self.assertEqual(recommendation.policy.context_policy, "summarized")
+
+    def test_capability_weaknesses_adjust_policy_fields(self) -> None:
+        profile = ModelProfile(
+            model_name="uneven",
+            planning=0.85,
+            tool_use=0.35,
+            instruction_following=0.85,
+            self_verification=0.35,
+            context_management=0.35,
+            recovery=0.35,
+            delegation=0.3,
+        )
+
+        recommendation = recommend_policy(profile, risk="medium", budget="standard")
+
+        self.assertEqual(recommendation.policy.tool_gatekeeping, "strict")
+        self.assertEqual(recommendation.policy.verifier_strength, "always")
+        self.assertEqual(recommendation.policy.retry_policy, "aggressive")
+        self.assertEqual(recommendation.policy.context_policy, "summarized")
+        self.assertEqual(recommendation.policy.subagent_policy, "disabled")
+        self.assertTrue(any("Weak recovery" in reason for reason in recommendation.rationale))

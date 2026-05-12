@@ -24,6 +24,7 @@ def recommend_policy(
     _validate_inputs(risk, budget)
     policy = _base_policy_for_profile(profile)
     rationale = [_base_rationale(profile)]
+    policy = _apply_capability_controls(profile, policy, rationale)
     policy = _apply_risk(policy, risk, rationale)
     policy = _apply_budget(policy, budget, risk, rationale)
     return PolicyRecommendation(
@@ -66,6 +67,46 @@ def _base_rationale(profile: ModelProfile) -> str:
     if average < 0.75:
         return "Capability average is mixed, so the base policy starts with structured controls."
     return "Capability average is strong, so the base policy starts with light controls."
+
+
+def _apply_capability_controls(
+    profile: ModelProfile,
+    policy: HarnessPolicy,
+    rationale: list[str],
+) -> HarnessPolicy:
+    updated = policy
+    if profile.planning < 0.5:
+        rationale.append("Weak planning raises planning depth.")
+        updated = replace(
+            updated,
+            planning_depth=_raise(updated.planning_depth, ("none", "light", "explicit", "strict")),
+        )
+    if profile.tool_use < 0.5:
+        rationale.append("Weak tool use raises tool gatekeeping.")
+        updated = replace(
+            updated,
+            tool_gatekeeping=_raise(updated.tool_gatekeeping, ("none", "moderate", "strict")),
+        )
+    if profile.self_verification < 0.5:
+        rationale.append("Weak self-verification raises verifier strength.")
+        updated = replace(
+            updated,
+            verifier_strength=_raise(updated.verifier_strength, ("none", "selective", "always")),
+        )
+    if profile.recovery < 0.5:
+        rationale.append("Weak recovery raises retry control and keeps recovery modules active.")
+        updated = replace(
+            updated,
+            retry_policy=_raise(updated.retry_policy, ("none", "bounded", "aggressive")),
+            verifier_strength=_raise(updated.verifier_strength, ("none", "selective", "always")),
+        )
+    if profile.context_management < 0.5:
+        rationale.append("Weak context management enables summarized context.")
+        updated = replace(updated, context_policy=_stronger_context(updated.context_policy))
+    if profile.delegation < 0.45 and updated.subagent_policy != "disabled":
+        rationale.append("Weak delegation disables subagent routing.")
+        updated = replace(updated, subagent_policy="disabled")
+    return updated
 
 
 def _apply_risk(
@@ -144,6 +185,10 @@ def _lower(value: str, order: tuple[str, ...], *, floor: str | None = None) -> s
     floor_index = order.index(floor) if floor else 0
     index = max(order.index(value) - 1, floor_index)
     return order[index]
+
+
+def _stronger_context(value: str) -> str:
+    return "summarized" if value != "summarized" else value
 
 
 def _validate_inputs(risk: RiskLevel, budget: BudgetLevel) -> None:
