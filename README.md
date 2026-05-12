@@ -35,8 +35,8 @@ autonomy windows, and selective verification.
 Early experimental MVP.
 
 The current version profiles a model, recommends a harness policy, compiles the
-policy into a `HarnessSpec`, compares fixed and adaptive harnesses, records
-traces, and emits JSON or Markdown reports.
+policy into a `HarnessSpec`, runs tasks with assembled modules, compares fixed
+and adaptive harnesses, records traces, and emits JSON or Markdown reports.
 
 ## Install
 
@@ -56,6 +56,12 @@ uv run adaharness recommend \
 uv run adaharness assemble \
   --policy runs/example-model-policy.json \
   --out runs/example-model-harness-spec.json
+uv run adaharness run \
+  --harness-spec runs/example-model-harness-spec.json \
+  --provider mock \
+  --model mock-model \
+  --task tasks/eval \
+  --out runs/example-run.json
 uv run adaharness compare --model example-model --taskset tasks/eval --out runs/example-compare.json
 uv run adaharness report runs/example-compare.json
 ```

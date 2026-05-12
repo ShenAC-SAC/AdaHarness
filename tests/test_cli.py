@@ -141,3 +141,54 @@ class CliTests(unittest.TestCase):
             self.assertEqual(file_data["name"], "test_spec")
             self.assertIn("planner", file_data["enabled_modules"])
             self.assertEqual(file_data["metadata"]["recommendation"]["model_name"], "assemble-model")
+
+    def test_run_records_enabled_modules_from_harness_spec(self) -> None:
+        profile = ModelProfile(
+            model_name="run-model",
+            planning=0.65,
+            tool_use=0.65,
+            instruction_following=0.65,
+            self_verification=0.65,
+            context_management=0.65,
+            recovery=0.65,
+        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            profile_path = Path(tmpdir) / "profile.json"
+            policy_path = Path(tmpdir) / "policy.json"
+            spec_path = Path(tmpdir) / "harness-spec.json"
+            run_path = Path(tmpdir) / "run.json"
+            profile_path.write_text(json.dumps(profile.to_dict()), encoding="utf-8")
+
+            with redirect_stdout(StringIO()):
+                main(["recommend", "--profile", str(profile_path), "--out", str(policy_path)])
+                main(["assemble", "--policy", str(policy_path), "--out", str(spec_path)])
+
+            output = StringIO()
+            with redirect_stdout(output):
+                exit_code = main(
+                    [
+                        "run",
+                        "--harness-spec",
+                        str(spec_path),
+                        "--task",
+                        "tasks/eval",
+                        "--provider",
+                        "mock",
+                        "--model",
+                        "mock-model",
+                        "--out",
+                        str(run_path),
+                    ]
+                )
+
+            data = json.loads(output.getvalue())
+            events = data["runs"][0]["trace"]["events"]
+            enabled_modules = [
+                event["payload"]["module"]
+                for event in events
+                if event["event_type"] == "module_enabled"
+            ]
+            self.assertEqual(exit_code, 0)
+            self.assertIn("trace", enabled_modules)
+            self.assertIn("planner", enabled_modules)
+            self.assertIn("trace_path", data["runs"][0])

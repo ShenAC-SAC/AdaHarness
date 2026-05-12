@@ -15,15 +15,23 @@ from adaharness.harnesses import (
     build_adaptive_harness,
 )
 from adaharness.harnesses.base import Harness
-from adaharness.models import SUPPORTED_PROVIDERS, ModelConfig, build_model_config
+from adaharness.harnesses.builder import HarnessBuilder
+from adaharness.models import (
+    SUPPORTED_PROVIDERS,
+    ModelClient,
+    ModelConfig,
+    build_model_client,
+    build_model_config,
+)
 from adaharness.policies.artifacts import PolicyRecommendation
 from adaharness.policies.generator import recommend_policy
-from adaharness.policies.schema import BUDGET_LEVELS, RISK_LEVELS
-from adaharness.policies.schema import HarnessPolicy
+from adaharness.policies.schema import BUDGET_LEVELS, RISK_LEVELS, HarnessPolicy
 from adaharness.profiler.profile_schema import ModelProfile
 from adaharness.profiler.runner import run_profiler
+from adaharness.runtime.budget import Budget
 from adaharness.runtime.results import RunResult
 from adaharness.specs import compile_policy_to_spec
+from adaharness.specs.harness_spec import HarnessSpec
 
 
 def _write_json(path: Path, data: dict[str, Any]) -> None:
@@ -52,8 +60,18 @@ def _load_policy(path: Path) -> tuple[HarnessPolicy, dict[str, Any]]:
     return HarnessPolicy.from_dict(data), {"source_artifact": str(path)}
 
 
+def _load_harness_spec(path: Path) -> HarnessSpec:
+    return HarnessSpec.from_dict(json.loads(path.read_text(encoding="utf-8")))
+
+
 def _model_config_from_args(args: argparse.Namespace) -> ModelConfig:
     return build_model_config(args.model, provider=args.provider, base_url=args.base_url)
+
+
+def _model_client_from_args(args: argparse.Namespace) -> ModelClient:
+    if not args.live and args.provider not in {"synthetic", "mock"}:
+        raise ValueError("real model providers require --live")
+    return build_model_client(_model_config_from_args(args))
 
 
 def _split_csv(value: str | None) -> list[str]:
@@ -161,6 +179,25 @@ def cmd_compare(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_run(args: argparse.Namespace) -> int:
+    spec = _load_harness_spec(Path(args.harness_spec))
+    harness = HarnessBuilder().build(spec)
+    tasks = load_taskset(Path(args.task))
+    model = _model_client_from_args(args)
+    results = [harness.run(task, model, budget=Budget()) for task in tasks]
+    out_path = Path(args.out) if args.out else None
+    data = {
+        "model_name": model.model_name,
+        "harness_spec": spec.to_dict(),
+        "task_count": len(tasks),
+        "runs": _run_records(out_path, results),
+    }
+    if out_path:
+        _write_json(out_path, data)
+    print(json.dumps(data, indent=2))
+    return 0
+
+
 def cmd_report(args: argparse.Namespace) -> int:
     data = json.loads(Path(args.run).read_text(encoding="utf-8"))
     if "comparisons" in data:
@@ -263,6 +300,16 @@ def build_parser() -> argparse.ArgumentParser:
     compare.add_argument("--taskset", required=True)
     compare.add_argument("--out")
     compare.set_defaults(func=cmd_compare)
+
+    run = subparsers.add_parser("run", help="Run a task with a compiled harness spec")
+    run.add_argument("--harness-spec", required=True)
+    run.add_argument("--task", required=True)
+    run.add_argument("--model", required=True)
+    run.add_argument("--provider", choices=SUPPORTED_PROVIDERS, default="synthetic")
+    run.add_argument("--base-url")
+    run.add_argument("--live", action="store_true")
+    run.add_argument("--out")
+    run.set_defaults(func=cmd_run)
 
     report = subparsers.add_parser("report", help="Render a compare run as Markdown")
     report.add_argument("run")
