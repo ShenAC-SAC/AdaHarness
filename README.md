@@ -37,7 +37,8 @@ Early experimental MVP.
 The current version profiles a model, recommends a harness policy, compiles the
 policy into a `HarnessSpec`, runs tasks with assembled modules, compares fixed
 and adaptive harnesses, records and imports traces, refines policies from trace
-evidence, and emits policy/module diffs for model migration.
+evidence, adapts active modules after retry signals, and emits policy/module
+diffs for model migration.
 
 ## Install
 

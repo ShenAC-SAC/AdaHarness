@@ -22,4 +22,5 @@ class HarnessBuilder:
             policy=HarnessPolicy.from_dict(source_policy),
             spec=spec,
             modules=modules,
+            registry=self.registry,
         )

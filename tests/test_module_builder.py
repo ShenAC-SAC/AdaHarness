@@ -83,3 +83,33 @@ class ModuleBuilderTests(unittest.TestCase):
         self.assertEqual(verifier_verdicts, ["failed", "passed"])
         self.assertIn("retry_controller.retry", events)
         self.assertIn("recovery.recover", events)
+
+    def test_online_adaptation_rebuilds_modules_before_retry(self) -> None:
+        task = EvalTask(
+            id="adaptive_retry",
+            category="recovery",
+            prompt="Recover.",
+            difficulty=0.5,
+            target_capability="recovery",
+        )
+        harness = HarnessBuilder().build(compile_policy_to_spec(STRUCTURED_POLICY))
+        model = MockModelClient(responses=("", "recovered response"))
+
+        result = harness.run(task, model, budget=Budget())
+
+        events = result.trace.events
+        event_types = [event.event_type for event in events]
+        verifier_strengths = [
+            event.payload["strength"]
+            for event in events
+            if event.event_type == "verifier.check"
+        ]
+        second_budget_check = [
+            event.payload
+            for event in events
+            if event.event_type == "budget_guard.check" and event.payload["attempt"] == 2
+        ][0]
+        self.assertIn("policy_change", event_types)
+        self.assertIn("modules_rebuilt", event_types)
+        self.assertEqual(verifier_strengths, ["selective", "always"])
+        self.assertEqual(second_budget_check["max_steps"], 6)
