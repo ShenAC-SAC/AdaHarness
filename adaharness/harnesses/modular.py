@@ -20,7 +20,7 @@ class ModularHarness:
     modules: tuple[HarnessModule, ...]
 
     def run(self, task: EvalTask, model: ModelClient, *, budget: Budget) -> RunResult:
-        """Run with assembled modules; v0.4 modules only record activation."""
+        """Run with assembled modules by calling lifecycle hooks in order."""
         trace = RunTrace.start(
             task_id=task.id,
             model_name=model.model_name,
@@ -31,18 +31,41 @@ class ModularHarness:
         for module in self.modules:
             trace = module.on_start(trace)
 
-        response = model.complete(
-            [{"role": "user", "content": task.prompt}],
-            temperature=0.0,
-            max_tokens=min(1024, budget.max_tokens),
-        )
-        usage = response.usage or ModelUsage()
-        trace = trace.add_event(
-            "llm_call",
-            input_tokens=usage.input_tokens,
-            output_tokens=usage.output_tokens,
-            total_tokens=usage.total_tokens,
-        ).finish()
+        attempt = 1
+        while True:
+            for module in self.modules:
+                trace = module.before_model_call(trace, task, attempt=attempt, budget=budget)
+
+            response = model.complete(
+                [{"role": "user", "content": task.prompt}],
+                temperature=0.0,
+                max_tokens=min(1024, budget.max_tokens),
+            )
+            usage = response.usage or ModelUsage()
+            trace = trace.add_event(
+                "llm_call",
+                attempt=attempt,
+                input_tokens=usage.input_tokens,
+                output_tokens=usage.output_tokens,
+                total_tokens=usage.total_tokens,
+            )
+            for module in self.modules:
+                trace = module.after_model_call(trace, task, response, attempt=attempt)
+
+            verification_failed = any(module.verification_failed(response) for module in self.modules)
+            retrying_modules = [
+                module
+                for module in self.modules
+                if module.should_retry(verification_failed=verification_failed, attempt=attempt)
+            ]
+            if not retrying_modules:
+                break
+
+            for module in self.modules:
+                trace = module.on_retry(trace, attempt=attempt, reason="verification_failure")
+            attempt += 1
+
+        trace = trace.finish()
         return RunResult(
             task_id=task.id,
             harness_name=self.name,
