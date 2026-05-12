@@ -1,0 +1,10 @@
+{
+  "id": "tool_use_001",
+  "capability": "tool_use",
+  "prompt": "Choose the correct mock tool, use its result exactly, and avoid inventing unseen tool output.",
+  "difficulty": 0.60,
+  "success_criteria": [
+    "selects the required tool",
+    "incorporates the observed result faithfully"
+  ]
+}

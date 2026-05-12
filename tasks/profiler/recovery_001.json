@@ -1,0 +1,11 @@
+{
+  "id": "recovery_001",
+  "capability": "recovery",
+  "prompt": "Recover from a failed mock tool call and complete the task with an accurate final state.",
+  "difficulty": 0.67,
+  "success_criteria": [
+    "detects the failed observation",
+    "retries or chooses a fallback",
+    "does not use failed output as fact"
+  ]
+}

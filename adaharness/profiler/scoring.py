@@ -12,6 +12,7 @@ DEFAULT_PROFILE = ModelProfile(
     context_management=0.61,
     recovery=0.50,
     cost_sensitivity=0.50,
+    delegation=0.50,
 )
 
 
@@ -26,4 +27,5 @@ def synthetic_profile(model_name: str) -> ModelProfile:
         context_management=DEFAULT_PROFILE.context_management,
         recovery=DEFAULT_PROFILE.recovery,
         cost_sensitivity=DEFAULT_PROFILE.cost_sensitivity,
+        delegation=DEFAULT_PROFILE.delegation,
     )

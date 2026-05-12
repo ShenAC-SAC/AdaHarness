@@ -1,0 +1,10 @@
+{
+  "id": "planning_001",
+  "capability": "planning",
+  "prompt": "Create a dependency-aware plan for a task with ordering constraints and one required revision.",
+  "difficulty": 0.64,
+  "success_criteria": [
+    "orders dependent steps correctly",
+    "updates the plan after a changed constraint"
+  ]
+}

@@ -23,3 +23,15 @@ class CliTests(unittest.TestCase):
         data = json.loads(output.getvalue())
         self.assertEqual(exit_code, 0)
         self.assertEqual(data["model_name"], "mock-model")
+
+    def test_profile_accepts_profiler_taskset(self) -> None:
+        output = StringIO()
+        with redirect_stdout(output):
+            exit_code = main(
+                ["profile", "--provider", "mock", "--model", "mock-model", "--taskset", "tasks/profiler"]
+            )
+
+        data = json.loads(output.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertIn("scores", data)
+        self.assertIn("recommended_controls", data)

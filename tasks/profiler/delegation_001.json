@@ -1,0 +1,10 @@
+{
+  "id": "delegation_001",
+  "capability": "delegation",
+  "prompt": "Decide whether a subagent is needed and, if so, write a bounded delegation brief.",
+  "difficulty": 0.57,
+  "success_criteria": [
+    "chooses delegation only when useful",
+    "states the delegated scope and expected output"
+  ]
+}

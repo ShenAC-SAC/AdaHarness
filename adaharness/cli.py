@@ -29,7 +29,8 @@ def _model_config_from_args(args: argparse.Namespace) -> ModelConfig:
 
 
 def cmd_profile(args: argparse.Namespace) -> int:
-    profile = run_profiler(_model_config_from_args(args))
+    taskset = Path(args.taskset) if args.taskset else None
+    profile = run_profiler(_model_config_from_args(args), taskset=taskset)
     data = profile.to_dict()
     if args.out:
         _write_json(Path(args.out), data)
@@ -102,6 +103,7 @@ def build_parser() -> argparse.ArgumentParser:
     profile.add_argument("--model", required=True)
     profile.add_argument("--provider", choices=SUPPORTED_PROVIDERS, default="synthetic")
     profile.add_argument("--base-url")
+    profile.add_argument("--taskset")
     profile.add_argument("--out")
     profile.set_defaults(func=cmd_profile)
 
