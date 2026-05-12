@@ -1,0 +1,7 @@
+{
+  "id": "planning_001",
+  "category": "planning",
+  "prompt": "Prepare a small research brief. Identify missing facts, decide which tools are needed, then produce a final answer.",
+  "difficulty": 0.62,
+  "target_capability": "planning"
+}

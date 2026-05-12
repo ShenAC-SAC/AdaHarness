@@ -1,0 +1,7 @@
+{
+  "id": "recovery_001",
+  "category": "recovery",
+  "prompt": "A tool call will fail once. Recover and complete the task while explaining the final state accurately.",
+  "difficulty": 0.66,
+  "target_capability": "recovery"
+}

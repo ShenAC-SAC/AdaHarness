@@ -1,0 +1,7 @@
+{
+  "id": "context_discipline_001",
+  "category": "context_management",
+  "prompt": "Follow the latest user instruction while preserving relevant earlier constraints.",
+  "difficulty": 0.60,
+  "target_capability": "context_management"
+}
