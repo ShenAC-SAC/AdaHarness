@@ -192,3 +192,66 @@ class CliTests(unittest.TestCase):
             self.assertIn("trace", enabled_modules)
             self.assertIn("planner", enabled_modules)
             self.assertIn("trace_path", data["runs"][0])
+
+    def test_migrate_outputs_policy_and_module_diff(self) -> None:
+        old_profile = ModelProfile(
+            model_name="old-small",
+            planning=0.35,
+            tool_use=0.35,
+            instruction_following=0.35,
+            self_verification=0.35,
+            context_management=0.35,
+            recovery=0.35,
+        )
+        new_profile = ModelProfile(
+            model_name="new-strong",
+            planning=0.9,
+            tool_use=0.9,
+            instruction_following=0.9,
+            self_verification=0.9,
+            context_management=0.9,
+            recovery=0.9,
+            cost_sensitivity=0.8,
+            delegation=0.8,
+        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            old_profile_path = Path(tmpdir) / "old-profile.json"
+            new_profile_path = Path(tmpdir) / "new-profile.json"
+            old_policy_path = Path(tmpdir) / "old-policy.json"
+            report_path = Path(tmpdir) / "migration.json"
+            old_profile_path.write_text(json.dumps(old_profile.to_dict()), encoding="utf-8")
+            new_profile_path.write_text(json.dumps(new_profile.to_dict()), encoding="utf-8")
+
+            with redirect_stdout(StringIO()):
+                main(
+                    [
+                        "recommend",
+                        "--profile",
+                        str(old_profile_path),
+                        "--out",
+                        str(old_policy_path),
+                    ]
+                )
+
+            output = StringIO()
+            with redirect_stdout(output):
+                exit_code = main(
+                    [
+                        "migrate",
+                        "--from-profile",
+                        str(old_profile_path),
+                        "--to-profile",
+                        str(new_profile_path),
+                        "--from-policy",
+                        str(old_policy_path),
+                        "--out",
+                        str(report_path),
+                    ]
+                )
+
+            data = json.loads(output.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(data, json.loads(report_path.read_text(encoding="utf-8")))
+            self.assertTrue(data["policy_diff"])
+            self.assertIn("module_diff", data)
+            self.assertIn("harness_drift_score", data["metrics"])

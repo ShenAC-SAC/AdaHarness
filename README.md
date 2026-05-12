@@ -36,7 +36,8 @@ Early experimental MVP.
 
 The current version profiles a model, recommends a harness policy, compiles the
 policy into a `HarnessSpec`, runs tasks with assembled modules, compares fixed
-and adaptive harnesses, records traces, and emits JSON or Markdown reports.
+and adaptive harnesses, records traces, and emits policy/module diffs for model
+migration.
 
 ## Install
 

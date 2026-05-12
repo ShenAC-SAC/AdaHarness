@@ -25,6 +25,7 @@ from adaharness.models import (
 )
 from adaharness.policies.artifacts import PolicyRecommendation
 from adaharness.policies.generator import recommend_policy
+from adaharness.policies.migration import build_migration_report
 from adaharness.policies.schema import BUDGET_LEVELS, RISK_LEVELS, HarnessPolicy
 from adaharness.profiler.profile_schema import ModelProfile
 from adaharness.profiler.runner import run_profiler
@@ -198,6 +199,24 @@ def cmd_run(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_migrate(args: argparse.Namespace) -> int:
+    from_profile = _load_profile(Path(args.from_profile))
+    to_profile = _load_profile(Path(args.to_profile))
+    from_policy, _ = _load_policy(Path(args.from_policy))
+    report = build_migration_report(
+        from_profile=from_profile,
+        to_profile=to_profile,
+        from_policy=from_policy,
+        risk=args.risk,
+        budget=args.budget,
+    )
+    data = report.to_dict()
+    if args.out:
+        _write_json(Path(args.out), data)
+    print(json.dumps(data, indent=2))
+    return 0
+
+
 def cmd_report(args: argparse.Namespace) -> int:
     data = json.loads(Path(args.run).read_text(encoding="utf-8"))
     if "comparisons" in data:
@@ -310,6 +329,15 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--live", action="store_true")
     run.add_argument("--out")
     run.set_defaults(func=cmd_run)
+
+    migrate = subparsers.add_parser("migrate", help="Compare current and recommended harness policy")
+    migrate.add_argument("--from-profile", required=True)
+    migrate.add_argument("--to-profile", required=True)
+    migrate.add_argument("--from-policy", required=True)
+    migrate.add_argument("--risk", choices=RISK_LEVELS, default="medium")
+    migrate.add_argument("--budget", choices=BUDGET_LEVELS, default="standard")
+    migrate.add_argument("--out")
+    migrate.set_defaults(func=cmd_migrate)
 
     report = subparsers.add_parser("report", help="Render a compare run as Markdown")
     report.add_argument("run")
