@@ -255,3 +255,61 @@ class CliTests(unittest.TestCase):
             self.assertTrue(data["policy_diff"])
             self.assertIn("module_diff", data)
             self.assertIn("harness_drift_score", data["metrics"])
+
+    def test_refine_outputs_proposed_policy_from_trace(self) -> None:
+        profile = ModelProfile(
+            model_name="refine-model",
+            planning=0.65,
+            tool_use=0.65,
+            instruction_following=0.65,
+            self_verification=0.65,
+            context_management=0.65,
+            recovery=0.65,
+        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            profile_path = Path(tmpdir) / "profile.json"
+            policy_path = Path(tmpdir) / "policy.json"
+            spec_path = Path(tmpdir) / "harness-spec.json"
+            run_path = Path(tmpdir) / "run.json"
+            refine_path = Path(tmpdir) / "refine.json"
+            profile_path.write_text(json.dumps(profile.to_dict()), encoding="utf-8")
+
+            with redirect_stdout(StringIO()):
+                main(["recommend", "--profile", str(profile_path), "--out", str(policy_path)])
+                main(["assemble", "--policy", str(policy_path), "--out", str(spec_path)])
+                main(
+                    [
+                        "run",
+                        "--harness-spec",
+                        str(spec_path),
+                        "--task",
+                        "tasks/eval",
+                        "--provider",
+                        "mock",
+                        "--model",
+                        "mock-model",
+                        "--out",
+                        str(run_path),
+                    ]
+                )
+
+            trace_dir = Path(tmpdir) / "run-traces"
+            output = StringIO()
+            with redirect_stdout(output):
+                exit_code = main(
+                    [
+                        "refine",
+                        "--policy",
+                        str(policy_path),
+                        "--trace",
+                        str(trace_dir),
+                        "--out",
+                        str(refine_path),
+                    ]
+                )
+
+            data = json.loads(output.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(data, json.loads(refine_path.read_text(encoding="utf-8")))
+            self.assertEqual(data["schema_version"], "0.8")
+            self.assertIn("proposed_spec", data)

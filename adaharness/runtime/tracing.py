@@ -25,6 +25,14 @@ class TraceEvent:
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "TraceEvent":
+        return cls(
+            event_type=data["event_type"],
+            payload=data.get("payload", {}),
+            timestamp=data["timestamp"],
+        )
+
 
 @dataclass(frozen=True)
 class RunTrace:
@@ -91,3 +99,16 @@ class RunTrace:
             "started_at": self.started_at,
             "ended_at": self.ended_at,
         }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "RunTrace":
+        return cls(
+            run_id=data["run_id"],
+            task_id=data["task_id"],
+            model_name=data["model_name"],
+            harness_name=data["harness_name"],
+            policy=HarnessPolicy.from_dict(data["policy"]),
+            events=tuple(TraceEvent.from_dict(event) for event in data.get("events", ())),
+            started_at=data["started_at"],
+            ended_at=data.get("ended_at"),
+        )

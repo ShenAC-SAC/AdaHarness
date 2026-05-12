@@ -26,6 +26,7 @@ from adaharness.models import (
 from adaharness.policies.artifacts import PolicyRecommendation
 from adaharness.policies.generator import recommend_policy
 from adaharness.policies.migration import build_migration_report
+from adaharness.policies.refinement import load_traces, refine_policy_from_traces
 from adaharness.policies.schema import BUDGET_LEVELS, RISK_LEVELS, HarnessPolicy
 from adaharness.profiler.profile_schema import ModelProfile
 from adaharness.profiler.runner import run_profiler
@@ -217,6 +218,17 @@ def cmd_migrate(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_refine(args: argparse.Namespace) -> int:
+    policy, _ = _load_policy(Path(args.policy))
+    traces = load_traces(Path(args.trace))
+    refinement = refine_policy_from_traces(policy, traces, name=args.name)
+    data = refinement.to_dict()
+    if args.out:
+        _write_json(Path(args.out), data)
+    print(json.dumps(data, indent=2))
+    return 0
+
+
 def cmd_report(args: argparse.Namespace) -> int:
     data = json.loads(Path(args.run).read_text(encoding="utf-8"))
     if "comparisons" in data:
@@ -338,6 +350,13 @@ def build_parser() -> argparse.ArgumentParser:
     migrate.add_argument("--budget", choices=BUDGET_LEVELS, default="standard")
     migrate.add_argument("--out")
     migrate.set_defaults(func=cmd_migrate)
+
+    refine = subparsers.add_parser("refine", help="Propose policy updates from run traces")
+    refine.add_argument("--policy", required=True)
+    refine.add_argument("--trace", required=True)
+    refine.add_argument("--name", default="refined_harness")
+    refine.add_argument("--out")
+    refine.set_defaults(func=cmd_refine)
 
     report = subparsers.add_parser("report", help="Render a compare run as Markdown")
     report.add_argument("run")
