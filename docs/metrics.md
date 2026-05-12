@@ -13,6 +13,8 @@ most complex one.
 - `harness_lift`: success-rate improvement over the `bare` baseline.
 - `harness_tax`: cost multiplier relative to the `bare` baseline.
 - `minimal_effective_harness_score`: success adjusted by harness tax.
+- `overconstraint_penalty`: cost and latency penalty not justified by lift.
+- `adaptation_gain`: adaptive MEH score compared with the best fixed harness.
 
 ## Interpretation
 
@@ -29,3 +31,10 @@ adaharness report runs/compare.json
 
 The report table is the first place to check whether `adaptive` is choosing a
 reasonable tradeoff compared with fixed `bare`, `light`, and `strong` presets.
+
+Matrix reports compare `model x harness` combinations:
+
+```bash
+uv run adaharness compare --models small-sim,strong-sim --taskset tasks/eval --out runs/matrix.json
+uv run adaharness report runs/matrix.json
+```

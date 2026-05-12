@@ -59,6 +59,18 @@ uv run adaharness compare --provider openai-compatible --model deepseek-chat --b
 uv run adaharness compare --provider openai-compatible --model qwen --base-url <provider-url> --taskset tasks/eval
 ```
 
+Compare multiple model profiles against multiple harnesses:
+
+```bash
+uv run adaharness compare \
+  --models small-sim,strong-sim \
+  --harnesses bare,light,strong,adaptive \
+  --taskset tasks/eval \
+  --out runs/model-harness-matrix.json
+
+uv run adaharness report runs/model-harness-matrix.json
+```
+
 Optional provider dependencies can be installed when needed:
 
 ```bash

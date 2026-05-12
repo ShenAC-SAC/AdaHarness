@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 
 
 @dataclass(frozen=True)
@@ -13,6 +13,8 @@ class HarnessMetrics:
     harness_lift: float = 0.0
     harness_tax: float = 1.0
     minimal_effective_harness_score: float = 0.0
+    overconstraint_penalty: float = 0.0
+    adaptation_gain: float = 0.0
 
     def to_dict(self) -> dict[str, float | int | str]:
         return asdict(self)
@@ -27,7 +29,15 @@ def compute_relative_metrics(
     for item in metrics:
         harness_lift = item.success_rate - baseline.success_rate
         harness_tax = item.estimated_cost / baseline.estimated_cost if baseline.estimated_cost else 1.0
-        score = item.success_rate - max(0.0, harness_tax - 1.0) * 0.15
+        latency_ratio = (
+            item.estimated_latency / baseline.estimated_latency
+            if baseline.estimated_latency
+            else 1.0
+        )
+        cost_penalty = max(0.0, harness_tax - 1.0) * 0.15
+        latency_penalty = max(0.0, latency_ratio - 1.0) * 0.05
+        score = item.success_rate - cost_penalty - latency_penalty
+        overconstraint_penalty = max(0.0, cost_penalty + latency_penalty - max(0.0, harness_lift))
         normalized.append(
             HarnessMetrics(
                 harness_name=item.harness_name,
@@ -38,6 +48,25 @@ def compute_relative_metrics(
                 harness_lift=harness_lift,
                 harness_tax=harness_tax,
                 minimal_effective_harness_score=score,
+                overconstraint_penalty=overconstraint_penalty,
             )
         )
-    return normalized
+    fixed_best = max(
+        (
+            item.minimal_effective_harness_score
+            for item in normalized
+            if item.harness_name != "adaptive"
+        ),
+        default=0.0,
+    )
+    return [
+        replace(
+            item,
+            adaptation_gain=(
+                item.minimal_effective_harness_score - fixed_best
+                if item.harness_name == "adaptive"
+                else 0.0
+            ),
+        )
+        for item in normalized
+    ]

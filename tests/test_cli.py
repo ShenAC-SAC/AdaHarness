@@ -14,6 +14,27 @@ class CliTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertIn('"model_name": "example-model"', output.getvalue())
         self.assertIn('"harness_name": "adaptive"', output.getvalue())
+        self.assertIn('"runs"', output.getvalue())
+
+    def test_compare_cli_supports_model_matrix(self) -> None:
+        output = StringIO()
+        with redirect_stdout(output):
+            exit_code = main(
+                [
+                    "compare",
+                    "--models",
+                    "small-sim,strong-sim",
+                    "--harnesses",
+                    "bare,adaptive",
+                    "--taskset",
+                    "tasks/eval",
+                ]
+            )
+
+        data = json.loads(output.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(len(data["comparisons"]), 2)
+        self.assertEqual(len(data["comparisons"][0]["results"]), 2)
 
     def test_profile_accepts_provider_options(self) -> None:
         output = StringIO()

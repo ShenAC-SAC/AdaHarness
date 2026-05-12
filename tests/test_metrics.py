@@ -29,3 +29,4 @@ class MetricsTests(unittest.TestCase):
         self.assertEqual(round(adaptive.harness_lift, 2), 0.3)
         self.assertEqual(adaptive.harness_tax, 1.3)
         self.assertLess(adaptive.minimal_effective_harness_score, adaptive.success_rate)
+        self.assertEqual(adaptive.overconstraint_penalty, 0.0)

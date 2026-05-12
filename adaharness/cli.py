@@ -13,6 +13,7 @@ from adaharness.models import SUPPORTED_PROVIDERS, ModelConfig, build_model_conf
 from adaharness.policies.generator import generate_policy
 from adaharness.profiler.profile_schema import ModelProfile
 from adaharness.profiler.runner import run_profiler
+from adaharness.runtime.results import RunResult
 
 
 def _write_json(path: Path, data: dict[str, Any]) -> None:
@@ -26,6 +27,51 @@ def _load_profile(path: Path) -> ModelProfile:
 
 def _model_config_from_args(args: argparse.Namespace) -> ModelConfig:
     return build_model_config(args.model, provider=args.provider, base_url=args.base_url)
+
+
+def _split_csv(value: str | None) -> list[str]:
+    if not value:
+        return []
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
+def _selected_harnesses(names: list[str], profile: ModelProfile) -> list[Harness]:
+    harnesses = {
+        "bare": BARE_HARNESS,
+        "light": LIGHT_HARNESS,
+        "strong": STRONG_HARNESS,
+        "adaptive": build_adaptive_harness(profile),
+    }
+    selected = names or list(harnesses)
+    unknown = [name for name in selected if name not in harnesses]
+    if unknown:
+        supported = ", ".join(harnesses)
+        raise ValueError(f"Unsupported harness {unknown[0]!r}. Expected one of: {supported}")
+    return [harnesses[name] for name in selected]
+
+
+def _run_records(out_path: Path | None, runs: list[RunResult]) -> list[dict[str, object]]:
+    trace_paths = _write_trace_files(out_path, runs) if out_path else {}
+    records = []
+    for run in runs:
+        record = run.to_dict()
+        trace_path = trace_paths.get(run.trace.run_id)
+        if trace_path is not None:
+            record["trace_path"] = str(trace_path)
+        records.append(record)
+    return records
+
+
+def _write_trace_files(out_path: Path, runs: list[RunResult]) -> dict[str, Path]:
+    trace_dir = out_path.with_suffix("")
+    trace_dir = trace_dir.parent / f"{trace_dir.name}-traces"
+    trace_dir.mkdir(parents=True, exist_ok=True)
+    paths = {}
+    for run in runs:
+        trace_path = trace_dir / f"{run.trace.run_id}.json"
+        trace_path.write_text(json.dumps(run.trace.to_dict(), indent=2) + "\n", encoding="utf-8")
+        paths[run.trace.run_id] = trace_path
+    return paths
 
 
 def cmd_profile(args: argparse.Namespace) -> int:
@@ -51,49 +97,99 @@ def cmd_recommend(args: argparse.Namespace) -> int:
 
 
 def cmd_compare(args: argparse.Namespace) -> int:
-    profile = run_profiler(_model_config_from_args(args))
-    if args.profile:
-        profile = _load_profile(Path(args.profile))
-
     tasks = load_taskset(Path(args.taskset))
-    harnesses: list[Harness] = [
-        BARE_HARNESS,
-        LIGHT_HARNESS,
-        STRONG_HARNESS,
-        build_adaptive_harness(profile),
-    ]
-    metrics, runs = compare_harness_runs(profile, harnesses, tasks)
-    data = {
-        "model_name": profile.model_name,
-        "profile": profile.to_dict(),
-        "task_count": len(tasks),
-        "results": [item.to_dict() for item in metrics],
-        "runs": [run.to_dict() for run in runs],
-    }
+    out_path = Path(args.out) if args.out else None
+    model_names = _split_csv(args.models) or ([args.model] if args.model else [])
+    if not model_names:
+        raise ValueError("compare requires --model or --models")
+    comparisons = []
+    for model_name in model_names:
+        config = build_model_config(model_name, provider=args.provider, base_url=args.base_url)
+        profile = _load_profile(Path(args.profile)) if args.profile else run_profiler(config)
+        harnesses = _selected_harnesses(_split_csv(args.harnesses), profile)
+        metrics, runs = compare_harness_runs(profile, harnesses, tasks)
+        comparisons.append(
+            {
+                "model_name": profile.model_name,
+                "profile": profile.to_dict(),
+                "task_count": len(tasks),
+                "results": [item.to_dict() for item in metrics],
+                "runs": _run_records(out_path, runs),
+            }
+        )
+
+    data = comparisons[0] if len(comparisons) == 1 else {"task_count": len(tasks), "comparisons": comparisons}
     if args.out:
-        _write_json(Path(args.out), data)
+        _write_json(out_path or Path(args.out), data)
     print(json.dumps(data, indent=2))
     return 0
 
 
 def cmd_report(args: argparse.Namespace) -> int:
     data = json.loads(Path(args.run).read_text(encoding="utf-8"))
+    if "comparisons" in data:
+        print(_render_matrix_report(data))
+        return 0
+
+    print(_render_single_report(data))
+    return 0
+
+
+def _render_single_report(data: dict[str, Any]) -> str:
     lines = [
         f"# AdaHarness Report: {data['model_name']}",
         "",
         f"- Task count: {data['task_count']}",
         "",
-        "| Harness | Success | Cost | Tax | Lift | MEH Score |",
-        "| --- | ---: | ---: | ---: | ---: | ---: |",
+        "| Harness | Success | Cost | Tax | Lift | MEH | Penalty | Adapt Gain |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     for item in data["results"]:
         lines.append(
             "| {harness_name} | {success_rate:.2f} | {estimated_cost:.2f} | "
             "{harness_tax:.2f} | {harness_lift:.2f} | "
-            "{minimal_effective_harness_score:.2f} |".format(**item)
+            "{minimal_effective_harness_score:.2f} | {overconstraint_penalty:.2f} | "
+            "{adaptation_gain:.2f} |".format(**item)
         )
-    print("\n".join(lines))
-    return 0
+    lines.extend(_failure_reason_lines(data.get("runs", [])))
+    return "\n".join(lines)
+
+
+def _render_matrix_report(data: dict[str, Any]) -> str:
+    lines = [
+        "# AdaHarness Matrix Report",
+        "",
+        f"- Task count: {data['task_count']}",
+        "",
+        "| Model | Harness | Success | Cost | Tax | Lift | MEH | Adapt Gain |",
+        "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |",
+    ]
+    for comparison in data["comparisons"]:
+        for item in comparison["results"]:
+            lines.append(
+                "| {model_name} | {harness_name} | {success_rate:.2f} | {estimated_cost:.2f} | "
+                "{harness_tax:.2f} | {harness_lift:.2f} | "
+                "{minimal_effective_harness_score:.2f} | {adaptation_gain:.2f} |".format(
+                    model_name=comparison["model_name"],
+                    **item,
+                )
+            )
+    for comparison in data["comparisons"]:
+        lines.extend(_failure_reason_lines(comparison.get("runs", []), model_name=comparison["model_name"]))
+    return "\n".join(lines)
+
+
+def _failure_reason_lines(runs: list[dict[str, Any]], model_name: str | None = None) -> list[str]:
+    failures = [run for run in runs if run.get("errors")]
+    if not failures:
+        return []
+
+    title = "Failure Reasons" if model_name is None else f"Failure Reasons: {model_name}"
+    lines = ["", f"## {title}", ""]
+    for run in failures:
+        errors = "; ".join(run["errors"])
+        lines.append(f"- `{run['harness_name']}` / `{run['task_id']}`: {errors}")
+    return lines
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -113,9 +209,11 @@ def build_parser() -> argparse.ArgumentParser:
     recommend.set_defaults(func=cmd_recommend)
 
     compare = subparsers.add_parser("compare", help="Compare harness presets")
-    compare.add_argument("--model", required=True)
+    compare.add_argument("--model")
+    compare.add_argument("--models")
     compare.add_argument("--provider", choices=SUPPORTED_PROVIDERS, default="synthetic")
     compare.add_argument("--base-url")
+    compare.add_argument("--harnesses")
     compare.add_argument("--profile")
     compare.add_argument("--taskset", required=True)
     compare.add_argument("--out")
