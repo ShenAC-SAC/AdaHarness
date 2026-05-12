@@ -30,23 +30,23 @@ small JSON or Markdown report.
 ## Install
 
 ```bash
-pip install -e .
+uv sync --group dev
 ```
 
 ## Quick Start
 
 ```bash
-adaharness profile --model example-model
-adaharness recommend --profile runs/example-model-profile.json
-adaharness compare --model example-model --taskset tasks/eval --out runs/example-compare.json
-adaharness report runs/example-compare.json
+uv run adaharness profile --model example-model
+uv run adaharness recommend --profile runs/example-model-profile.json
+uv run adaharness compare --model example-model --taskset tasks/eval --out runs/example-compare.json
+uv run adaharness report runs/example-compare.json
 ```
 
 You can also run the package without installing it:
 
 ```bash
-python -m adaharness.cli profile --model example-model
-python -m adaharness.cli compare --model example-model --taskset tasks/eval
+uv run python -m adaharness.cli profile --model example-model
+uv run python -m adaharness.cli compare --model example-model --taskset tasks/eval
 ```
 
 ## Why
