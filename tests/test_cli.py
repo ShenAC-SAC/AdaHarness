@@ -313,3 +313,34 @@ class CliTests(unittest.TestCase):
             self.assertEqual(data, json.loads(refine_path.read_text(encoding="utf-8")))
             self.assertEqual(data["schema_version"], "0.8")
             self.assertIn("proposed_spec", data)
+
+    def test_import_trace_normalizes_external_json(self) -> None:
+        source = {
+            "run_id": "external_cli",
+            "task_id": "task_cli",
+            "model_name": "external-model",
+            "harness_name": "external-runtime",
+            "events": [{"type": "llm_call", "total_tokens": 3}],
+        }
+        with tempfile.TemporaryDirectory() as tmpdir:
+            source_path = Path(tmpdir) / "external.json"
+            out_path = Path(tmpdir) / "normalized.json"
+            source_path.write_text(json.dumps(source), encoding="utf-8")
+
+            output = StringIO()
+            with redirect_stdout(output):
+                exit_code = main(
+                    [
+                        "import-trace",
+                        "--source",
+                        str(source_path),
+                        "--out",
+                        str(out_path),
+                    ]
+                )
+
+            data = json.loads(output.getvalue())
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(data, json.loads(out_path.read_text(encoding="utf-8")))
+            self.assertEqual(data["model_name"], "external-model")
+            self.assertEqual(data["events"][0]["event_type"], "llm_call")

@@ -16,6 +16,7 @@ from adaharness.harnesses import (
 )
 from adaharness.harnesses.base import Harness
 from adaharness.harnesses.builder import HarnessBuilder
+from adaharness.integrations import import_external_trace
 from adaharness.models import (
     SUPPORTED_PROVIDERS,
     ModelClient,
@@ -229,6 +230,15 @@ def cmd_refine(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_import_trace(args: argparse.Namespace) -> int:
+    trace = import_external_trace(Path(args.source))
+    data = trace.to_dict()
+    if args.out:
+        _write_json(Path(args.out), data)
+    print(json.dumps(data, indent=2))
+    return 0
+
+
 def cmd_report(args: argparse.Namespace) -> int:
     data = json.loads(Path(args.run).read_text(encoding="utf-8"))
     if "comparisons" in data:
@@ -357,6 +367,11 @@ def build_parser() -> argparse.ArgumentParser:
     refine.add_argument("--name", default="refined_harness")
     refine.add_argument("--out")
     refine.set_defaults(func=cmd_refine)
+
+    import_trace = subparsers.add_parser("import-trace", help="Normalize an external trace")
+    import_trace.add_argument("--source", required=True)
+    import_trace.add_argument("--out")
+    import_trace.set_defaults(func=cmd_import_trace)
 
     report = subparsers.add_parser("report", help="Render a compare run as Markdown")
     report.add_argument("run")
