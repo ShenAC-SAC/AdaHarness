@@ -60,6 +60,10 @@ A `RuntimeAdapter` inspects a runtime's capabilities and produces a
 Without a binding, AdaHarness can only recommend and explain. With a binding, it
 can guide how an existing agent project applies the controls.
 
+The first adapter contract only produces a binding report. It does not mutate
+LangGraph, OpenAI Agents SDK, or user-owned agent objects. Runtime-specific
+automatic application can be added after the binding contract is stable.
+
 ## Non-Goals
 
 - AdaHarness should not become a full LangGraph, OpenAI Agents SDK, or custom

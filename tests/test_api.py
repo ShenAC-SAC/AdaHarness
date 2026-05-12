@@ -3,6 +3,7 @@ import tempfile
 import unittest
 
 from adaharness import (
+    bind_harness_spec,
     build_reference_harness,
     compile_harness_spec,
     load_policy,
@@ -13,6 +14,7 @@ from adaharness import (
     recommend_harness_policy,
     save_artifact,
 )
+from adaharness.adapters import AdapterCapabilities
 from adaharness.policies.artifacts import PolicyRecommendation
 from adaharness.specs.harness_spec import HarnessSpec
 
@@ -29,6 +31,28 @@ class PublicApiTests(unittest.TestCase):
         self.assertIsInstance(spec, HarnessSpec)
         self.assertEqual(harness.name, "api-spec")
         self.assertEqual(spec.metadata["recommendation"]["model_name"], "api-model")
+
+    def test_public_api_binds_spec_to_runtime_capabilities(self) -> None:
+        profile = profile_model("binding-api")
+        recommendation = recommend_harness_policy(profile)
+        spec = compile_harness_spec(recommendation)
+
+        binding = bind_harness_spec(
+            spec,
+            runtime="custom-python",
+            capabilities=AdapterCapabilities(
+                supports_pre_model_hook=True,
+                supports_post_model_hook=True,
+                supports_tool_interception=True,
+                supports_tool_execution=True,
+                supports_retry_loop=True,
+                supports_subagents=True,
+                supports_trace_export=True,
+            ),
+        )
+
+        self.assertEqual(binding.runtime, "custom-python")
+        self.assertIn("planner", binding.bindings)
 
     def test_artifact_load_save_helpers(self) -> None:
         profile = profile_model("artifact-api")

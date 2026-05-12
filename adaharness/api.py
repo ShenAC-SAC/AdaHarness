@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 import json
 
+from adaharness.adapters import AdapterCapabilities, RuntimeBinding, bind_runtime
 from adaharness.harnesses.builder import HarnessBuilder
 from adaharness.harnesses.modular import ModularHarness
 from adaharness.models import ModelConfig, build_model_config
@@ -60,6 +61,15 @@ def compile_harness_spec(
 
 def build_reference_harness(spec: HarnessSpec) -> ModularHarness:
     return HarnessBuilder().build(spec)
+
+
+def bind_harness_spec(
+    spec: HarnessSpec,
+    *,
+    capabilities: AdapterCapabilities | None = None,
+    runtime: str = "generic",
+) -> RuntimeBinding:
+    return bind_runtime(spec, capabilities=capabilities, runtime=runtime)
 
 
 def load_profile(path: str | Path) -> ModelProfile:
