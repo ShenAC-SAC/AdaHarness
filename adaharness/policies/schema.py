@@ -11,6 +11,11 @@ RetryPolicy = Literal["none", "bounded", "aggressive"]
 AutonomyBudget = Literal["small", "medium", "large"]
 SubagentPolicy = Literal["disabled", "optional", "recommended", "mandatory"]
 ContextPolicy = Literal["raw", "summarized", "retrieval_augmented"]
+RiskLevel = Literal["low", "medium", "high"]
+BudgetLevel = Literal["constrained", "standard", "generous"]
+
+RISK_LEVELS: tuple[RiskLevel, ...] = ("low", "medium", "high")
+BUDGET_LEVELS: tuple[BudgetLevel, ...] = ("constrained", "standard", "generous")
 
 
 @dataclass(frozen=True)

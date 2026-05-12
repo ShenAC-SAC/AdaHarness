@@ -16,7 +16,8 @@ from adaharness.harnesses import (
 )
 from adaharness.harnesses.base import Harness
 from adaharness.models import SUPPORTED_PROVIDERS, ModelConfig, build_model_config
-from adaharness.policies.generator import generate_policy
+from adaharness.policies.generator import recommend_policy
+from adaharness.policies.schema import BUDGET_LEVELS, RISK_LEVELS
 from adaharness.profiler.profile_schema import ModelProfile
 from adaharness.profiler.runner import run_profiler
 from adaharness.runtime.results import RunResult
@@ -93,12 +94,10 @@ def cmd_profile(args: argparse.Namespace) -> int:
 
 def cmd_recommend(args: argparse.Namespace) -> int:
     profile = _load_profile(Path(args.profile))
-    policy = generate_policy(profile)
-    data = {
-        "model_name": profile.model_name,
-        "capability_average": profile.capability_average,
-        "policy": policy.to_dict(),
-    }
+    recommendation = recommend_policy(profile, risk=args.risk, budget=args.budget)
+    data = recommendation.to_dict()
+    if args.out:
+        _write_json(Path(args.out), data)
     print(json.dumps(data, indent=2))
     return 0
 
@@ -213,6 +212,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     recommend = subparsers.add_parser("recommend", help="Recommend a harness policy")
     recommend.add_argument("--profile", required=True)
+    recommend.add_argument("--risk", choices=RISK_LEVELS, default="medium")
+    recommend.add_argument("--budget", choices=BUDGET_LEVELS, default="standard")
+    recommend.add_argument("--out")
     recommend.set_defaults(func=cmd_recommend)
 
     compare = subparsers.add_parser("compare", help="Compare harness presets")

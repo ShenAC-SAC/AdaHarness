@@ -49,7 +49,11 @@ uv sync --group dev
 
 ```bash
 uv run adaharness profile --model example-model
-uv run adaharness recommend --profile runs/example-model-profile.json
+uv run adaharness recommend \
+  --profile runs/example-model-profile.json \
+  --risk medium \
+  --budget standard \
+  --out runs/example-model-policy.json
 uv run adaharness compare --model example-model --taskset tasks/eval --out runs/example-compare.json
 uv run adaharness report runs/example-compare.json
 ```

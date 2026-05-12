@@ -1,6 +1,7 @@
 import unittest
 
 from adaharness.policies.generator import generate_policy
+from adaharness.policies.generator import recommend_policy
 from adaharness.profiler.profile_schema import ModelProfile
 
 
@@ -36,3 +37,40 @@ class PolicyGeneratorTests(unittest.TestCase):
 
         self.assertEqual(policy.planning_depth, "light")
         self.assertEqual(policy.retry_policy, "bounded")
+
+    def test_high_risk_strengthens_controls(self) -> None:
+        profile = ModelProfile(
+            model_name="medium-risk",
+            planning=0.65,
+            tool_use=0.65,
+            instruction_following=0.65,
+            self_verification=0.65,
+            context_management=0.65,
+            recovery=0.65,
+        )
+
+        recommendation = recommend_policy(profile, risk="high", budget="standard")
+
+        self.assertEqual(recommendation.risk, "high")
+        self.assertEqual(recommendation.policy.planning_depth, "strict")
+        self.assertEqual(recommendation.policy.tool_gatekeeping, "strict")
+        self.assertEqual(recommendation.policy.verifier_strength, "always")
+        self.assertIn("High risk", recommendation.rationale[1])
+
+    def test_constrained_budget_reduces_expensive_controls(self) -> None:
+        profile = ModelProfile(
+            model_name="budget",
+            planning=0.65,
+            tool_use=0.65,
+            instruction_following=0.65,
+            self_verification=0.65,
+            context_management=0.65,
+            recovery=0.65,
+        )
+
+        recommendation = recommend_policy(profile, risk="medium", budget="constrained")
+
+        self.assertEqual(recommendation.budget, "constrained")
+        self.assertEqual(recommendation.policy.planning_depth, "light")
+        self.assertEqual(recommendation.policy.retry_policy, "none")
+        self.assertEqual(recommendation.policy.context_policy, "summarized")

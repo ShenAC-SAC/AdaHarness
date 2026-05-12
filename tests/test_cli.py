@@ -1,7 +1,10 @@
 from adaharness.cli import main
+from adaharness.profiler.profile_schema import ModelProfile
 from contextlib import redirect_stdout
 from io import StringIO
+from pathlib import Path
 import json
+import tempfile
 import unittest
 
 
@@ -56,3 +59,43 @@ class CliTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertIn("scores", data)
         self.assertIn("recommended_controls", data)
+
+    def test_recommend_writes_reusable_policy_artifact(self) -> None:
+        profile = ModelProfile(
+            model_name="artifact-model",
+            planning=0.65,
+            tool_use=0.65,
+            instruction_following=0.65,
+            self_verification=0.65,
+            context_management=0.65,
+            recovery=0.65,
+        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            profile_path = Path(tmpdir) / "profile.json"
+            policy_path = Path(tmpdir) / "policy.json"
+            profile_path.write_text(json.dumps(profile.to_dict()), encoding="utf-8")
+
+            output = StringIO()
+            with redirect_stdout(output):
+                exit_code = main(
+                    [
+                        "recommend",
+                        "--profile",
+                        str(profile_path),
+                        "--risk",
+                        "high",
+                        "--budget",
+                        "constrained",
+                        "--out",
+                        str(policy_path),
+                    ]
+                )
+
+            stdout_data = json.loads(output.getvalue())
+            file_data = json.loads(policy_path.read_text(encoding="utf-8"))
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(stdout_data, file_data)
+            self.assertEqual(file_data["schema_version"], "0.2")
+            self.assertEqual(file_data["risk"], "high")
+            self.assertEqual(file_data["budget"], "constrained")
+            self.assertEqual(file_data["policy"]["verifier_strength"], "selective")
