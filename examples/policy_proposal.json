@@ -1,0 +1,13 @@
+{
+  "source": "fixture",
+  "rationale": "The profile shows weak recovery and tool use, so use strict controls.",
+  "policy": {
+    "planning_depth": "strict",
+    "tool_gatekeeping": "strict",
+    "verifier_strength": "always",
+    "retry_policy": "aggressive",
+    "autonomy_budget": "small",
+    "subagent_policy": "recommended",
+    "context_policy": "summarized"
+  }
+}

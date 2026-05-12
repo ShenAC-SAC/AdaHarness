@@ -6,6 +6,7 @@ from adaharness.harnesses.base import Harness
 from adaharness.harnesses.runtime import runtime_for_harness
 from adaharness.models.base import ModelClient
 from adaharness.models.mock import MockModelClient
+from adaharness.policies.controller import TracePolicyController
 from adaharness.profiler.profile_schema import ModelProfile
 from adaharness.runtime.budget import Budget
 from adaharness.runtime.results import RunResult
@@ -73,6 +74,18 @@ def run_harness(
             retry_limit = 1 if harness.policy.retry_policy == "bounded" else run_budget.max_retries
             for attempt in range(1, retry_limit + 1):
                 trace = trace.add_event("retry", policy=harness.policy.retry_policy, attempt=attempt)
+        if harness.name == "adaptive":
+            controller = TracePolicyController(harness.policy)
+            for event in trace.events:
+                controller.observe(event, harness.policy)
+            updated_policy = controller.maybe_update_policy()
+            if updated_policy is not None and updated_policy != harness.policy:
+                trace = trace.add_event(
+                    "policy_change",
+                    old_policy=harness.policy.to_dict(),
+                    new_policy=updated_policy.to_dict(),
+                    reason=controller.reason,
+                )
         raw_result = raw_result.with_trace(trace)
         complexity = harness.complexity_weight
         results.append(

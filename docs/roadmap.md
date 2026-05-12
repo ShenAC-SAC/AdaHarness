@@ -31,14 +31,11 @@ harness evolution while keeping each stage independently useful and testable.
 
 ## Later Research Tracks
 
-- LLM-generated harness policies.
-- Online adaptive harness changes during execution.
+- LLM-generated harness policies validated as structured proposals.
+- Online adaptive harness changes recorded as trace-backed policy changes.
 - Public benchmark packs and reproducible `model x harness` leaderboard reports.
 
 ## Backlog Candidates
 
-These are future GitHub issue candidates when public task tracking becomes
-useful. Keep them in the roadmap for now.
-
-- `docs(research): document Minimal Effective Harness`
-- `docs(project): explain why AdaHarness is not another agent framework`
+Future GitHub issues should be created here only when public task tracking
+becomes useful.

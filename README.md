@@ -11,6 +11,17 @@ constraints.
 The goal is not to build one universal agent framework. The goal is to learn the
 minimal effective harness for a given model, task, budget, and risk level.
 
+## Research Question
+
+Most agent frameworks apply the same orchestration pattern to every model.
+AdaHarness starts from a different assumption:
+
+> Different models need different levels of harness control.
+
+A smaller model may need explicit planning, strict tool gating, retries, and
+verification. A stronger model may perform better with fewer constraints, larger
+autonomy windows, and selective verification.
+
 ## Core Ideas
 
 - Model capability profiling
@@ -91,6 +102,12 @@ surrounding harness: planning, tools, memory, retries, verification, context
 management, and runtime policy.
 
 AdaHarness explores how harnesses should adapt as models become more capable.
+
+## What AdaHarness Is Not
+
+AdaHarness is not a replacement for LangChain, LangGraph, OpenAI Agents SDK, or
+other agent runtimes. It is an evaluation-first adaptive harness layer that can
+sit above different runtimes.
 
 ## MVP Scope
 
