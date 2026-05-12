@@ -59,9 +59,9 @@ results, then AdaHarness analyzes harness drift:
 
 ```bash
 uv run adaharness analyze \
-  --traces traces/new-model.jsonl \
-  --current-policy policies/current.json \
-  --out reports/harness-drift.md
+  --traces examples/traces/overconstrained_harness.jsonl \
+  --current-policy examples/policies/heavy_policy.json \
+  --out runs/harness-drift.md
 ```
 
 Trace events can start small:
@@ -75,6 +75,10 @@ Trace events can start small:
 
 AdaHarness should produce a report explaining whether controls are useful,
 wasteful, or missing.
+
+For the bundled example, the report should flag likely overconstraint: the
+verifier rarely catches issues while adding cost, and explicit planning accounts
+for a large latency share.
 
 ## Project-Local CLI
 
