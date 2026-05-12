@@ -1,7 +1,8 @@
 # Architecture
 
-AdaHarness is organized as a lightweight evaluation pipeline rather than a full
-agent framework.
+AdaHarness is organized as a policy-driven modular harness system rather than a
+full agent framework. Evaluation is a means to generate and validate policy, not
+the final product boundary.
 
 ## Module Boundaries
 
@@ -10,6 +11,10 @@ agent framework.
 - `adaharness/profiler/` produces a `ModelProfile` describing agent-relevant
   capability dimensions.
 - `adaharness/policies/` maps a profile to a `HarnessPolicy`.
+- `adaharness/specs/` will compile `HarnessPolicy` into runtime-facing
+  `HarnessSpec` module configuration.
+- `adaharness/modules/` will implement planner, verifier, retry, budget,
+  context, tool, and trace modules.
 - `adaharness/harnesses/` defines fixed presets and builds the adaptive harness.
 - `adaharness/harnesses/runtime.py` defines executable runtime strategies for
   those presets without turning preset metadata into mutable execution state.
@@ -25,10 +30,10 @@ Version 0.1 intentionally uses synthetic profiling and deterministic evaluation
 logic. This keeps the harness-selection loop testable before introducing real
 model APIs, tool execution, or online policy updates.
 
-The current selection data flow is:
+The intended product data flow is:
 
 ```text
-model name -> ModelProfile -> HarnessPolicy -> Harness -> HarnessMetrics -> report
+ModelProfile -> HarnessPolicy -> HarnessSpec -> ModularHarness -> RunTrace -> PolicyRefinement
 ```
 
 The provider boundary is separate:
