@@ -26,13 +26,17 @@ traces, then produce artifacts under `.adaharness/`:
   report.md
 ```
 
-Planned commands:
+Current and planned commands:
 
 ```bash
 adaharness calibrate --config adaharness.toml
 adaharness bind --config adaharness.toml --spec .adaharness/spec.json
 adaharness validate --config adaharness.toml --binding .adaharness/binding.json
 ```
+
+`calibrate` is implemented first. It loads the project adapter, runs the taskset,
+and writes profile, policy, spec, binding, run, and report artifacts. `bind` and
+`validate` are planned follow-ups around the same adapter contract.
 
 ## Project Configuration
 

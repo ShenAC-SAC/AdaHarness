@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import argparse
+import importlib
 import json
 from pathlib import Path
+import sys
 from typing import Any
 
 from adaharness.config import AdaHarnessConfig, load_config
@@ -30,6 +32,7 @@ from adaharness.policies.generator import recommend_policy
 from adaharness.policies.migration import build_migration_report
 from adaharness.policies.refinement import load_traces, refine_policy_from_traces
 from adaharness.policies.schema import BUDGET_LEVELS, RISK_LEVELS, HarnessPolicy
+from adaharness.project import ProjectAgentAdapter, calibrate_project
 from adaharness.profiler.profile_schema import ModelProfile
 from adaharness.profiler.runner import run_profiler
 from adaharness.runtime.budget import Budget
@@ -73,6 +76,34 @@ def _project_config_from_args(args: argparse.Namespace) -> AdaHarnessConfig | No
     if not config_path:
         return None
     return load_config(config_path, env_file=getattr(args, "env_file", None))
+
+
+def _config_root(config: AdaHarnessConfig) -> Path:
+    return Path(config.source_path).parent if config.source_path else Path.cwd()
+
+
+def _resolve_config_path(config: AdaHarnessConfig, value: str) -> Path:
+    path = Path(value)
+    return path if path.is_absolute() else _config_root(config) / path
+
+
+def _load_project_adapter(config: AdaHarnessConfig, adapter_path: str | None = None) -> ProjectAgentAdapter:
+    target = adapter_path or config.project.adapter
+    if not target:
+        raise ValueError("calibrate requires [project].adapter or --adapter")
+    if ":" not in target:
+        raise ValueError("adapter must use 'module.path:ObjectName' format")
+
+    module_name, object_name = target.split(":", 1)
+    root = str(_config_root(config))
+    if root not in sys.path:
+        sys.path.insert(0, root)
+    module = importlib.import_module(module_name)
+    factory = getattr(module, object_name)
+    adapter = factory() if isinstance(factory, type) else factory
+    if not hasattr(adapter, "run_task") or not hasattr(adapter, "capabilities"):
+        raise TypeError("project adapter must define capabilities() and run_task(...)")
+    return adapter
 
 
 def _model_config_from_args(args: argparse.Namespace) -> ModelConfig:
@@ -146,6 +177,52 @@ def _write_trace_files(out_path: Path, runs: list[RunResult]) -> dict[str, Path]
         trace_path.write_text(json.dumps(run.trace.to_dict(), indent=2) + "\n", encoding="utf-8")
         paths[run.trace.run_id] = trace_path
     return paths
+
+
+def _write_calibration_artifacts(out_dir: Path, data: dict[str, Any]) -> dict[str, str]:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    paths = {
+        "calibration": out_dir / "calibration.json",
+        "profile": out_dir / "profile.json",
+        "policy": out_dir / "policy.json",
+        "spec": out_dir / "spec.json",
+        "binding": out_dir / "binding.json",
+        "runs": out_dir / "runs.json",
+        "report": out_dir / "report.md",
+    }
+    _write_json(paths["calibration"], data)
+    _write_json(paths["profile"], data["profile"])
+    _write_json(paths["policy"], data["recommendation"])
+    _write_json(paths["spec"], data["spec"])
+    _write_json(paths["binding"], data["binding"])
+    paths["runs"].write_text(json.dumps(data["runs"], indent=2) + "\n", encoding="utf-8")
+    paths["report"].write_text(data["report"] + "\n", encoding="utf-8")
+    return {name: str(path) for name, path in paths.items()}
+
+
+def cmd_calibrate(args: argparse.Namespace) -> int:
+    config = load_config(args.config, env_file=args.env_file)
+    taskset_value = args.taskset or config.project.taskset or config.defaults.taskset
+    if not taskset_value:
+        raise ValueError("calibrate requires [project].taskset, [defaults].taskset, or --taskset")
+    adapter = _load_project_adapter(config, adapter_path=args.adapter)
+    tasks = load_taskset(_resolve_config_path(config, taskset_value))
+    risk = args.risk or config.defaults.risk
+    budget = args.budget or config.defaults.budget
+    result = calibrate_project(adapter, tasks, risk=risk, budget=budget)
+    data = result.to_dict()
+    out_dir_value = args.out_dir or config.project.artifact_dir
+    out_dir = _resolve_config_path(config, out_dir_value)
+    artifacts = _write_calibration_artifacts(out_dir, data)
+    summary = {
+        "project": result.profile.project_name,
+        "task_count": result.profile.task_count,
+        "success_rate": result.profile.success_rate,
+        "artifact_dir": str(out_dir),
+        "artifacts": artifacts,
+    }
+    print(json.dumps(summary, indent=2))
+    return 0
 
 
 def cmd_profile(args: argparse.Namespace) -> int:
@@ -288,6 +365,8 @@ def cmd_config_validate(args: argparse.Namespace) -> int:
         "valid": True,
         "model_count": len(resolved_models),
         "provider_count": len(config.providers),
+        "project_adapter": config.project.adapter,
+        "project_taskset": config.project.taskset,
         "models": sorted(resolved_models),
     }
     print(json.dumps(data, indent=2))
@@ -364,6 +443,16 @@ def _failure_reason_lines(runs: list[dict[str, Any]], model_name: str | None = N
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="adaharness")
     subparsers = parser.add_subparsers(dest="command", required=True)
+
+    calibrate = subparsers.add_parser("calibrate", help="Calibrate controls inside a host agent project")
+    calibrate.add_argument("--config", required=True)
+    calibrate.add_argument("--env-file")
+    calibrate.add_argument("--adapter")
+    calibrate.add_argument("--taskset")
+    calibrate.add_argument("--risk", choices=RISK_LEVELS)
+    calibrate.add_argument("--budget", choices=BUDGET_LEVELS)
+    calibrate.add_argument("--out-dir")
+    calibrate.set_defaults(func=cmd_calibrate)
 
     profile = subparsers.add_parser("profile", help="Run model profiler")
     profile.add_argument("--model", required=True)

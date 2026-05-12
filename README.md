@@ -113,26 +113,24 @@ calibration, regression, trace-import, and artifact-generation tool. In a real
 agent project, provider credentials should normally stay in that project.
 
 For CLI experiments or CI, project configuration can live in `adaharness.toml`,
-with secrets in `.env`:
+with secrets in `.env` only when AdaHarness itself owns the lab model call. For
+embedded calibration, config should point to the host project's adapter:
 
 ```toml
-[providers.deepseek]
-type = "openai-compatible"
-base_url = "https://api.deepseek.com/v1"
-api_key_env = "DEEPSEEK_API_KEY"
-
-[models.deepseek-chat]
-provider = "deepseek"
+[project]
+name = "my-agent"
+adapter = "my_agent.adaharness_adapter:MyAgentAdapter"
+taskset = "tests/adaharness_tasks"
+artifact_dir = ".adaharness"
 
 [defaults]
 risk = "medium"
 budget = "standard"
-taskset = "tasks/profiler"
 ```
 
 ```bash
 uv run adaharness config validate --config adaharness.toml
-uv run adaharness profile --config adaharness.toml --model deepseek-chat --out runs/profile.json
+uv run adaharness calibrate --config adaharness.toml
 ```
 
 The current CLI also includes lab commands backed by AdaHarness' reference
@@ -145,7 +143,7 @@ uv run python -m adaharness.cli compare --model example-model --taskset tasks/ev
 ```
 
 Provider selection is available for the model-adapter boundary. The current
-profiler remains deterministic until task-backed capability profiling is added.
+profiler remains deterministic and is mainly a lab path.
 
 ```bash
 uv run adaharness profile --provider mock --model mock-model

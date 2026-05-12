@@ -70,10 +70,36 @@ class ConfigDefaults:
 
 
 @dataclass(frozen=True)
+class ProjectSettings:
+    name: str = "agent-project"
+    adapter: str | None = None
+    taskset: str | None = None
+    artifact_dir: str = ".adaharness"
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "ProjectSettings":
+        return cls(
+            name=data.get("name", "agent-project"),
+            adapter=data.get("adapter"),
+            taskset=data.get("taskset"),
+            artifact_dir=data.get("artifact_dir", ".adaharness"),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "name": self.name,
+            "adapter": self.adapter,
+            "taskset": self.taskset,
+            "artifact_dir": self.artifact_dir,
+        }
+
+
+@dataclass(frozen=True)
 class AdaHarnessConfig:
     providers: dict[str, ProviderConfig] = field(default_factory=dict)
     models: dict[str, ModelEntry] = field(default_factory=dict)
     defaults: ConfigDefaults = field(default_factory=ConfigDefaults)
+    project: ProjectSettings = field(default_factory=ProjectSettings)
     source_path: str | None = None
 
     @classmethod
@@ -88,6 +114,7 @@ class AdaHarnessConfig:
                 for name, model in data.get("models", {}).items()
             },
             defaults=ConfigDefaults.from_dict(data.get("defaults", {})),
+            project=ProjectSettings.from_dict(data.get("project", {})),
             source_path=source_path,
         )
 
@@ -118,6 +145,7 @@ class AdaHarnessConfig:
                 for name, model in self.models.items()
             },
             "defaults": self.defaults.to_dict(),
+            "project": self.project.to_dict(),
         }
 
 
