@@ -6,6 +6,7 @@ import json
 
 from adaharness.adapters import AdapterCapabilities, RuntimeBinding, bind_runtime
 from adaharness.config import AdaHarnessConfig, load_config
+from adaharness.evals.task_schema import EvalTask
 from adaharness.harnesses.builder import HarnessBuilder
 from adaharness.harnesses.modular import ModularHarness
 from adaharness.models import ModelConfig, build_model_config
@@ -14,6 +15,7 @@ from adaharness.policies.generator import recommend_policy
 from adaharness.policies.schema import BudgetLevel, HarnessPolicy, RiskLevel
 from adaharness.profiler.profile_schema import ModelProfile
 from adaharness.profiler.runner import run_profiler
+from adaharness.project import CalibrationResult, ProjectAgentAdapter, calibrate_project
 from adaharness.specs import compile_policy_to_spec
 from adaharness.specs.harness_spec import HarnessSpec
 
@@ -71,6 +73,16 @@ def bind_harness_spec(
     runtime: str = "generic",
 ) -> RuntimeBinding:
     return bind_runtime(spec, capabilities=capabilities, runtime=runtime)
+
+
+def calibrate_agent_project(
+    adapter: ProjectAgentAdapter,
+    tasks: list[EvalTask],
+    *,
+    risk: RiskLevel = "medium",
+    budget: BudgetLevel = "standard",
+) -> CalibrationResult:
+    return calibrate_project(adapter, tasks, risk=risk, budget=budget)
 
 
 def load_project_config(path: str | Path, *, env_file: str | Path | None = None) -> AdaHarnessConfig:

@@ -38,9 +38,9 @@ another project with different tools, prompts, and failure modes.
 Early experimental MVP.
 
 The current version has the policy, spec, controller, binding, config, reference
-runtime, and trace-import foundation. The next focus is project-local
-calibration: running or importing traces from a user's own agent runtime and
-compiling controls back into that runtime through adapters.
+runtime, trace-import, and project calibration foundations. Project calibration
+can run tasks through a host adapter and produce profile, policy, spec, binding,
+runs, and report artifacts.
 
 ## Install
 
@@ -55,24 +55,44 @@ keeps ownership of model providers, credentials, tools, prompts, and runtime
 state.
 
 ```python
-from adaharness import bind_harness_spec, compile_harness_spec, recommend_harness_policy
+from adaharness import calibrate_agent_project
 from adaharness.adapters import AdapterCapabilities
-from adaharness.profiler.profile_schema import ModelProfile
 
-profile = ModelProfile(
-    model_name="my-agent-runtime",
-    planning=0.58,
-    tool_use=0.70,
-    instruction_following=0.76,
-    self_verification=0.52,
-    context_management=0.61,
-    recovery=0.45,
+class MyAgentAdapter:
+    name = "my-agent"
+
+    def capabilities(self):
+        return AdapterCapabilities(
+            supports_pre_model_hook=True,
+            supports_post_model_hook=True,
+            supports_tool_interception=True,
+            supports_retry_loop=True,
+            supports_trace_export=True,
+        )
+
+    def run_task(self, task, *, binding=None):
+        # Delegate to the host project's own model config, prompts, tools, and runtime.
+        return my_agent_run_task(task, binding=binding)
+
+result = calibrate_agent_project(
+    MyAgentAdapter(),
+    tasks=my_calibration_tasks,
+    risk="medium",
+    budget="standard",
 )
-recommendation = recommend_harness_policy(profile, risk="medium", budget="standard")
+binding = result.binding
+```
+
+For lower-level integrations, projects can still build artifacts directly:
+
+```python
+from adaharness import bind_harness_spec, compile_harness_spec, recommend_harness_policy
+
+recommendation = recommend_harness_policy(project_profile)
 spec = compile_harness_spec(recommendation, name="my-agent-controls")
 binding = bind_harness_spec(
     spec,
-    runtime="custom-python",
+    runtime="my-agent",
     capabilities=AdapterCapabilities(
         supports_pre_model_hook=True,
         supports_post_model_hook=True,

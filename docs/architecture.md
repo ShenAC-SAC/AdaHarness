@@ -27,8 +27,9 @@ Agents SDK, Claude Agent SDK, or a custom agent loop.
 
 - `adaharness/models/` defines model configuration, the `ModelClient` protocol,
   structured responses, and provider adapter boundaries for lab runs.
-- Future `adaharness/project/` owns project-local calibration interfaces:
-  project adapters, project run results, and calibration artifacts.
+- `adaharness/project/` owns project-local calibration interfaces: project
+  adapters, project run results, agent-system profiles, and calibration
+  artifacts.
 - `adaharness/profiler/` produces a `ModelProfile` describing agent-relevant
   capability dimensions. Project calibration should later lift this into an
   `AgentSystemProfile`.
