@@ -65,6 +65,11 @@ as:
 Without a binding, AdaHarness can only recommend and explain. With a binding, it
 can guide how an existing agent project applies the controls.
 
+The binding is keyed by controller, not by AdaHarness internal module. For
+example, `planner` maps to a hook plus level, mode, authority, triggers, budget,
+and escalation settings. Legacy module names may appear only as compatibility
+metadata for the reference runtime.
+
 The first adapter contract only produces a binding report. It does not mutate
 LangGraph, OpenAI Agents SDK, or user-owned agent objects. Runtime-specific
 automatic application can be added after the binding contract is stable.

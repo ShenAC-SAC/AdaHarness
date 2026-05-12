@@ -54,6 +54,7 @@ class PublicApiTests(unittest.TestCase):
 
         self.assertEqual(binding.runtime, "custom-python")
         self.assertIn("planner", binding.bindings)
+        self.assertEqual(binding.bindings["planner"]["controller"], "planner")
 
     def test_artifact_load_save_helpers(self) -> None:
         profile = profile_model("artifact-api")

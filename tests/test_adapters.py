@@ -6,14 +6,14 @@ from adaharness.specs import compile_policy_to_spec
 
 
 class AdapterBindingTests(unittest.TestCase):
-    def test_generic_adapter_reports_unsupported_modules(self) -> None:
+    def test_generic_adapter_reports_unsupported_controllers(self) -> None:
         spec = compile_policy_to_spec(STRUCTURED_POLICY, name="structured")
 
         binding = GenericRuntimeAdapter().bind(spec)
 
         self.assertIsInstance(binding, RuntimeBinding)
-        self.assertIn("planner", binding.unsupported_modules)
-        self.assertIn("planner requires supports_pre_model_hook.", binding.warnings)
+        self.assertIn("planner", binding.unsupported_controllers)
+        self.assertIn("Controller planner requires supports_pre_model_hook.", binding.warnings)
 
     def test_generic_adapter_binds_supported_hooks(self) -> None:
         spec = compile_policy_to_spec(STRUCTURED_POLICY, name="structured")
@@ -32,6 +32,10 @@ class AdapterBindingTests(unittest.TestCase):
         self.assertEqual(binding.runtime, "custom-python")
         self.assertIn("planner", binding.bindings)
         self.assertEqual(binding.bindings["planner"]["hook"], "before_model_call")
+        self.assertEqual(binding.bindings["planner"]["controller"], "planner")
+        self.assertEqual(binding.bindings["planner"]["legacy_module"], "planner")
+        self.assertIn("level", binding.bindings["planner"])
+        self.assertEqual(binding.unsupported_controllers, ())
         self.assertEqual(binding.unsupported_modules, ())
 
     def test_binding_round_trips_from_dict(self) -> None:
@@ -40,6 +44,7 @@ class AdapterBindingTests(unittest.TestCase):
             spec_name="spec",
             enabled_features=("planner",),
             bindings={"planner": {"hook": "before_model_call"}},
+            unsupported_controllers=("verifier",),
         )
 
         restored = RuntimeBinding.from_dict(binding.to_dict())

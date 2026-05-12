@@ -24,13 +24,15 @@ class RuntimeBinding:
     spec_name: str
     enabled_features: tuple[str, ...]
     bindings: dict[str, Any] = field(default_factory=dict)
+    unsupported_controllers: tuple[str, ...] = ()
     unsupported_modules: tuple[str, ...] = ()
     warnings: tuple[str, ...] = ()
-    schema_version: str = "0.1"
+    schema_version: str = "0.2"
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "enabled_features", tuple(self.enabled_features))
         object.__setattr__(self, "bindings", dict(self.bindings))
+        object.__setattr__(self, "unsupported_controllers", tuple(self.unsupported_controllers))
         object.__setattr__(self, "unsupported_modules", tuple(self.unsupported_modules))
         object.__setattr__(self, "warnings", tuple(self.warnings))
 
@@ -41,6 +43,7 @@ class RuntimeBinding:
             "spec_name": self.spec_name,
             "enabled_features": list(self.enabled_features),
             "bindings": self.bindings,
+            "unsupported_controllers": list(self.unsupported_controllers),
             "unsupported_modules": list(self.unsupported_modules),
             "warnings": list(self.warnings),
         }
@@ -52,6 +55,7 @@ class RuntimeBinding:
             spec_name=data["spec_name"],
             enabled_features=tuple(data.get("enabled_features", ())),
             bindings=data.get("bindings", {}),
+            unsupported_controllers=tuple(data.get("unsupported_controllers", ())),
             unsupported_modules=tuple(data.get("unsupported_modules", ())),
             warnings=tuple(data.get("warnings", ())),
             schema_version=data.get("schema_version", "0.1"),
