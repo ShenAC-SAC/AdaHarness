@@ -68,6 +68,28 @@ uv run adaharness compare --model example-model --taskset tasks/eval --out runs/
 uv run adaharness report runs/example-compare.json
 ```
 
+Project configuration can live in `adaharness.toml`, with secrets in `.env`:
+
+```toml
+[providers.deepseek]
+type = "openai-compatible"
+base_url = "https://api.deepseek.com/v1"
+api_key_env = "DEEPSEEK_API_KEY"
+
+[models.deepseek-chat]
+provider = "deepseek"
+
+[defaults]
+risk = "medium"
+budget = "standard"
+taskset = "tasks/profiler"
+```
+
+```bash
+uv run adaharness config validate --config adaharness.toml
+uv run adaharness profile --config adaharness.toml --model deepseek-chat --out runs/profile.json
+```
+
 You can also run the package without installing it:
 
 ```bash

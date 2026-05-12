@@ -33,3 +33,21 @@ Add a native provider adapter only when the provider has meaningful protocol
 differences that cannot be represented by `openai-compatible`, `anthropic`, or
 `local`. Otherwise, keep the implementation at the protocol layer and document
 the provider-specific `--base-url` and environment setup.
+
+## Project Configuration
+
+Provider URLs and provider-specific API key environment variables should live in
+`adaharness.toml`, not repeated command lines:
+
+```toml
+[providers.deepseek]
+type = "openai-compatible"
+base_url = "https://api.deepseek.com/v1"
+api_key_env = "DEEPSEEK_API_KEY"
+
+[models.deepseek-chat]
+provider = "deepseek"
+```
+
+`.env` may define `DEEPSEEK_API_KEY=...`. `config inspect` reports whether a key
+is configured without printing the secret value.

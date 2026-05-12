@@ -9,6 +9,7 @@ from adaharness import (
     load_policy,
     load_policy_recommendation,
     load_profile,
+    load_project_config,
     load_spec,
     profile_model,
     recommend_harness_policy,
@@ -71,3 +72,21 @@ class PublicApiTests(unittest.TestCase):
             self.assertEqual(load_policy(policy_path), recommendation.policy)
             self.assertEqual(load_policy_recommendation(policy_path), recommendation)
             self.assertEqual(load_spec(spec_path).to_dict(), spec.to_dict())
+
+    def test_public_api_loads_project_config(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / "adaharness.toml"
+            config_path.write_text(
+                """
+[providers.mock-provider]
+type = "mock"
+
+[models.mock-model]
+provider = "mock-provider"
+""",
+                encoding="utf-8",
+            )
+
+            config = load_project_config(config_path)
+
+        self.assertEqual(config.resolve_model("mock-model").provider, "mock")

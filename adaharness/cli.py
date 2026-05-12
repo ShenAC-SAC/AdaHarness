@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from adaharness.config import AdaHarnessConfig, load_config
 from adaharness.evals.runner import compare_harness_runs
 from adaharness.evals.task_schema import load_taskset
 from adaharness.harnesses import (
@@ -67,8 +68,32 @@ def _load_harness_spec(path: Path) -> HarnessSpec:
     return HarnessSpec.from_dict(json.loads(path.read_text(encoding="utf-8")))
 
 
+def _project_config_from_args(args: argparse.Namespace) -> AdaHarnessConfig | None:
+    config_path = getattr(args, "config", None)
+    if not config_path:
+        return None
+    return load_config(config_path, env_file=getattr(args, "env_file", None))
+
+
 def _model_config_from_args(args: argparse.Namespace) -> ModelConfig:
-    return build_model_config(args.model, provider=args.provider, base_url=args.base_url)
+    return _model_config_for_name(args, args.model)
+
+
+def _model_config_for_name(args: argparse.Namespace, model_name: str) -> ModelConfig:
+    config = _project_config_from_args(args)
+    if config is not None:
+        resolved = config.resolve_model(model_name)
+        return build_model_config(
+            model_name,
+            provider=args.provider or resolved.provider,
+            base_url=args.base_url or resolved.base_url,
+            api_key=resolved.api_key,
+        )
+    return build_model_config(
+        model_name,
+        provider=args.provider or "synthetic",
+        base_url=args.base_url,
+    )
 
 
 def _model_client_from_args(args: argparse.Namespace) -> ModelClient:
@@ -124,7 +149,9 @@ def _write_trace_files(out_path: Path, runs: list[RunResult]) -> dict[str, Path]
 
 
 def cmd_profile(args: argparse.Namespace) -> int:
-    taskset = Path(args.taskset) if args.taskset else None
+    config = _project_config_from_args(args)
+    taskset_value = args.taskset or (config.defaults.taskset if config else None)
+    taskset = Path(taskset_value) if taskset_value else None
     profile = run_profiler(_model_config_from_args(args), taskset=taskset)
     data = profile.to_dict()
     if args.out:
@@ -134,8 +161,11 @@ def cmd_profile(args: argparse.Namespace) -> int:
 
 
 def cmd_recommend(args: argparse.Namespace) -> int:
+    config = _project_config_from_args(args)
     profile = _load_profile(Path(args.profile))
-    recommendation = recommend_policy(profile, risk=args.risk, budget=args.budget)
+    risk = args.risk or (config.defaults.risk if config else "medium")
+    budget = args.budget or (config.defaults.budget if config else "standard")
+    recommendation = recommend_policy(profile, risk=risk, budget=budget)
     data = recommendation.to_dict()
     if args.out:
         _write_json(Path(args.out), data)
@@ -161,8 +191,8 @@ def cmd_compare(args: argparse.Namespace) -> int:
         raise ValueError("compare requires --model or --models")
     comparisons = []
     for model_name in model_names:
-        config = build_model_config(model_name, provider=args.provider, base_url=args.base_url)
-        profile = _load_profile(Path(args.profile)) if args.profile else run_profiler(config)
+        model_config = _model_config_for_name(args, model_name)
+        profile = _load_profile(Path(args.profile)) if args.profile else run_profiler(model_config)
         harnesses = _selected_harnesses(_split_csv(args.harnesses), profile)
         metrics, runs = compare_harness_runs(profile, harnesses, tasks)
         comparisons.append(
@@ -202,15 +232,18 @@ def cmd_run(args: argparse.Namespace) -> int:
 
 
 def cmd_migrate(args: argparse.Namespace) -> int:
+    config = _project_config_from_args(args)
     from_profile = _load_profile(Path(args.from_profile))
     to_profile = _load_profile(Path(args.to_profile))
     from_policy, _ = _load_policy(Path(args.from_policy))
+    risk = args.risk or (config.defaults.risk if config else "medium")
+    budget = args.budget or (config.defaults.budget if config else "standard")
     report = build_migration_report(
         from_profile=from_profile,
         to_profile=to_profile,
         from_policy=from_policy,
-        risk=args.risk,
-        budget=args.budget,
+        risk=risk,
+        budget=budget,
     )
     data = report.to_dict()
     if args.out:
@@ -235,6 +268,28 @@ def cmd_import_trace(args: argparse.Namespace) -> int:
     data = trace.to_dict()
     if args.out:
         _write_json(Path(args.out), data)
+    print(json.dumps(data, indent=2))
+    return 0
+
+
+def cmd_config_inspect(args: argparse.Namespace) -> int:
+    config = load_config(args.config, env_file=args.env_file)
+    print(json.dumps(config.to_dict(), indent=2))
+    return 0
+
+
+def cmd_config_validate(args: argparse.Namespace) -> int:
+    config = load_config(args.config, env_file=args.env_file)
+    resolved_models = {
+        model_name: config.resolve_model(model_name)
+        for model_name in config.models
+    }
+    data = {
+        "valid": True,
+        "model_count": len(resolved_models),
+        "provider_count": len(config.providers),
+        "models": sorted(resolved_models),
+    }
     print(json.dumps(data, indent=2))
     return 0
 
@@ -312,16 +367,20 @@ def build_parser() -> argparse.ArgumentParser:
 
     profile = subparsers.add_parser("profile", help="Run model profiler")
     profile.add_argument("--model", required=True)
-    profile.add_argument("--provider", choices=SUPPORTED_PROVIDERS, default="synthetic")
+    profile.add_argument("--config")
+    profile.add_argument("--env-file")
+    profile.add_argument("--provider", choices=SUPPORTED_PROVIDERS)
     profile.add_argument("--base-url")
     profile.add_argument("--taskset")
     profile.add_argument("--out")
     profile.set_defaults(func=cmd_profile)
 
     recommend = subparsers.add_parser("recommend", help="Recommend a harness policy")
+    recommend.add_argument("--config")
+    recommend.add_argument("--env-file")
     recommend.add_argument("--profile", required=True)
-    recommend.add_argument("--risk", choices=RISK_LEVELS, default="medium")
-    recommend.add_argument("--budget", choices=BUDGET_LEVELS, default="standard")
+    recommend.add_argument("--risk", choices=RISK_LEVELS)
+    recommend.add_argument("--budget", choices=BUDGET_LEVELS)
     recommend.add_argument("--out")
     recommend.set_defaults(func=cmd_recommend)
 
@@ -334,7 +393,9 @@ def build_parser() -> argparse.ArgumentParser:
     compare = subparsers.add_parser("compare", help="Compare harness presets")
     compare.add_argument("--model")
     compare.add_argument("--models")
-    compare.add_argument("--provider", choices=SUPPORTED_PROVIDERS, default="synthetic")
+    compare.add_argument("--config")
+    compare.add_argument("--env-file")
+    compare.add_argument("--provider", choices=SUPPORTED_PROVIDERS)
     compare.add_argument("--base-url")
     compare.add_argument("--harnesses")
     compare.add_argument("--profile")
@@ -346,18 +407,22 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--harness-spec", required=True)
     run.add_argument("--task", required=True)
     run.add_argument("--model", required=True)
-    run.add_argument("--provider", choices=SUPPORTED_PROVIDERS, default="synthetic")
+    run.add_argument("--config")
+    run.add_argument("--env-file")
+    run.add_argument("--provider", choices=SUPPORTED_PROVIDERS)
     run.add_argument("--base-url")
     run.add_argument("--live", action="store_true")
     run.add_argument("--out")
     run.set_defaults(func=cmd_run)
 
     migrate = subparsers.add_parser("migrate", help="Compare current and recommended harness policy")
+    migrate.add_argument("--config")
+    migrate.add_argument("--env-file")
     migrate.add_argument("--from-profile", required=True)
     migrate.add_argument("--to-profile", required=True)
     migrate.add_argument("--from-policy", required=True)
-    migrate.add_argument("--risk", choices=RISK_LEVELS, default="medium")
-    migrate.add_argument("--budget", choices=BUDGET_LEVELS, default="standard")
+    migrate.add_argument("--risk", choices=RISK_LEVELS)
+    migrate.add_argument("--budget", choices=BUDGET_LEVELS)
     migrate.add_argument("--out")
     migrate.set_defaults(func=cmd_migrate)
 
@@ -372,6 +437,19 @@ def build_parser() -> argparse.ArgumentParser:
     import_trace.add_argument("--source", required=True)
     import_trace.add_argument("--out")
     import_trace.set_defaults(func=cmd_import_trace)
+
+    config = subparsers.add_parser("config", help="Inspect or validate project configuration")
+    config_subparsers = config.add_subparsers(dest="config_command", required=True)
+
+    inspect_config = config_subparsers.add_parser("inspect", help="Print resolved configuration")
+    inspect_config.add_argument("--config", required=True)
+    inspect_config.add_argument("--env-file")
+    inspect_config.set_defaults(func=cmd_config_inspect)
+
+    validate_config = config_subparsers.add_parser("validate", help="Validate project configuration")
+    validate_config.add_argument("--config", required=True)
+    validate_config.add_argument("--env-file")
+    validate_config.set_defaults(func=cmd_config_validate)
 
     report = subparsers.add_parser("report", help="Render a compare run as Markdown")
     report.add_argument("run")

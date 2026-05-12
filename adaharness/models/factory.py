@@ -18,20 +18,30 @@ def build_model_config(
     *,
     provider: str = "synthetic",
     base_url: str | None = None,
+    api_key: str | None = None,
 ) -> ModelConfig:
     if provider not in SUPPORTED_PROVIDERS:
         supported = ", ".join(SUPPORTED_PROVIDERS)
         raise ValueError(f"Unsupported provider {provider!r}. Expected one of: {supported}")
-    return ModelConfig(name=model_name, provider=cast(ProviderName, provider), base_url=base_url)
+    return ModelConfig(
+        name=model_name,
+        provider=cast(ProviderName, provider),
+        base_url=base_url,
+        api_key=api_key,
+    )
 
 
 def build_model_client(config: ModelConfig) -> ModelClient:
     if config.provider in {"synthetic", "mock"}:
         return MockModelClient(model_name=config.name)
     if config.provider == "openai-compatible":
-        return OpenAICompatibleModelClient(model_name=config.name, base_url=config.base_url)
+        return OpenAICompatibleModelClient(
+            model_name=config.name,
+            base_url=config.base_url,
+            api_key=config.api_key,
+        )
     if config.provider == "anthropic":
-        return AnthropicModelClient(model_name=config.name)
+        return AnthropicModelClient(model_name=config.name, api_key=config.api_key)
     if config.provider == "local":
         return LocalHTTPModelClient(model_name=config.name, base_url=config.base_url or _LOCAL_BASE_URL)
 

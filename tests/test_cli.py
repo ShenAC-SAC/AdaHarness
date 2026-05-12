@@ -345,3 +345,52 @@ class CliTests(unittest.TestCase):
             self.assertEqual(data, json.loads(out_path.read_text(encoding="utf-8")))
             self.assertEqual(data["model_name"], "external-model")
             self.assertEqual(data["events"][0]["event_type"], "llm_call")
+
+    def test_config_inspect_and_profile_use_project_config(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            config_path = root / "adaharness.toml"
+            profile_path = root / "profile.json"
+            config_path.write_text(
+                """
+[providers.mock-provider]
+type = "mock"
+
+[models.mock-model]
+provider = "mock-provider"
+
+[defaults]
+risk = "high"
+budget = "constrained"
+taskset = "tasks/profiler"
+""",
+                encoding="utf-8",
+            )
+
+            inspect_output = StringIO()
+            with redirect_stdout(inspect_output):
+                inspect_code = main(["config", "inspect", "--config", str(config_path)])
+
+            validate_output = StringIO()
+            with redirect_stdout(validate_output):
+                validate_code = main(["config", "validate", "--config", str(config_path)])
+
+            profile_output = StringIO()
+            with redirect_stdout(profile_output):
+                profile_code = main(
+                    [
+                        "profile",
+                        "--config",
+                        str(config_path),
+                        "--model",
+                        "mock-model",
+                        "--out",
+                        str(profile_path),
+                    ]
+                )
+
+        self.assertEqual(inspect_code, 0)
+        self.assertEqual(validate_code, 0)
+        self.assertEqual(profile_code, 0)
+        self.assertEqual(json.loads(validate_output.getvalue())["valid"], True)
+        self.assertEqual(json.loads(profile_output.getvalue())["model_name"], "mock-model")

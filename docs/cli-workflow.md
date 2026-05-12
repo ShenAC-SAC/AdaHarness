@@ -6,6 +6,10 @@ become the commands for changing harnesses after model or trace evidence changes
 
 ## Primary Path
 
+Use `adaharness.toml` for durable project settings and `.env` for secrets when
+working inside an agent project. CLI flags should override config only for
+one-off experiments.
+
 ```bash
 adaharness profile \
   --model qwen-local \
@@ -58,3 +62,25 @@ adaharness migrate \
 
 The migration report should include policy diffs, module diffs, harness drift,
 overconstraint penalty, underconstraint risk, and recommended next actions.
+
+## Configuration
+
+```toml
+[providers.local-qwen]
+type = "local"
+base_url = "http://localhost:11434"
+
+[models.qwen-local]
+provider = "local-qwen"
+
+[defaults]
+risk = "medium"
+budget = "standard"
+taskset = "tasks/profiler"
+```
+
+```bash
+adaharness config inspect --config adaharness.toml
+adaharness config validate --config adaharness.toml
+adaharness profile --config adaharness.toml --model qwen-local
+```

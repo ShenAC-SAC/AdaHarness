@@ -5,6 +5,7 @@ from typing import Any
 import json
 
 from adaharness.adapters import AdapterCapabilities, RuntimeBinding, bind_runtime
+from adaharness.config import AdaHarnessConfig, load_config
 from adaharness.harnesses.builder import HarnessBuilder
 from adaharness.harnesses.modular import ModularHarness
 from adaharness.models import ModelConfig, build_model_config
@@ -70,6 +71,10 @@ def bind_harness_spec(
     runtime: str = "generic",
 ) -> RuntimeBinding:
     return bind_runtime(spec, capabilities=capabilities, runtime=runtime)
+
+
+def load_project_config(path: str | Path, *, env_file: str | Path | None = None) -> AdaHarnessConfig:
+    return load_config(path, env_file=env_file)
 
 
 def load_profile(path: str | Path) -> ModelProfile:

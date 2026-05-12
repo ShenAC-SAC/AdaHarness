@@ -14,6 +14,7 @@ class ModelConfig:
     name: str
     provider: ProviderName = "synthetic"
     base_url: str | None = None
+    api_key: str | None = None
 
 
 @dataclass(frozen=True)

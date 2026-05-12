@@ -6,6 +6,9 @@ requires-python = ">=3.10"
 name = "adaharness"
 version = "0.1.0"
 source = { editable = "." }
+dependencies = [
+    { name = "tomli", marker = "python_full_version < '3.11'" },
+]
 
 [package.optional-dependencies]
 all = [
@@ -37,6 +40,7 @@ requires-dist = [
     { name = "openai", marker = "extra == 'openai'", specifier = ">=1.0" },
     { name = "requests", marker = "extra == 'all'", specifier = ">=2.31" },
     { name = "requests", marker = "extra == 'local'", specifier = ">=2.31" },
+    { name = "tomli", marker = "python_full_version < '3.11'", specifier = ">=2.0" },
 ]
 provides-extras = ["openai", "anthropic", "local", "all"]
 
