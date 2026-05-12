@@ -1,22 +1,21 @@
 # AdaHarness
 
-Adaptive harness selection and evaluation for LLM agents.
+Model-aware harness compiler for LLM agents.
 
-AdaHarness is an experimental framework for studying how different language
-models require different agent harnesses. Smaller or less reliable models may
-benefit from stronger workflow control, tool gating, retries, and verification.
-Stronger models may perform better with lighter orchestration and fewer
-constraints.
+AdaHarness profiles a model, generates a `HarnessPolicy`, and is being built to
+assemble a modular harness that matches the model's capabilities, task type,
+budget, and risk level.
 
-The goal is not to build one universal agent framework. The goal is to learn the
-minimal effective harness for a given model, task, budget, and risk level.
+When models change, the optimal harness often changes too. AdaHarness helps
+detect harness drift, reduce overconstraint for stronger models, add control for
+weaker models, and export executable harness specifications.
 
 ## Research Question
 
-Most agent frameworks apply the same orchestration pattern to every model.
-AdaHarness starts from a different assumption:
+Most agent systems use a fixed harness across different models. AdaHarness
+starts from a different assumption:
 
-> Different models need different levels of harness control.
+> When you change the model, you may need to change the harness.
 
 A smaller model may need explicit planning, strict tool gating, retries, and
 verification. A stronger model may perform better with fewer constraints, larger
@@ -25,18 +24,20 @@ autonomy windows, and selective verification.
 ## Core Ideas
 
 - Model capability profiling
-- Policy-based harness selection
-- Bare vs light vs structured vs strong vs adaptive harness comparison
-- Harness lift and harness tax measurement
-- Runtime tracing for future harness evolution
+- `HarnessPolicy` generation
+- `HarnessPolicy -> HarnessSpec` compilation
+- Model migration and policy/module diff reporting
+- Harness lift, harness tax, drift, and overconstraint measurement
+- Runtime tracing for future policy refinement
 
 ## Current Status
 
 Early experimental MVP.
 
-The first version is intentionally evaluation-first: it profiles a model,
-selects a harness preset, compares fixed and adaptive harnesses, and emits a
-small JSON or Markdown report.
+The current version profiles a model, recommends a harness policy, compares
+fixed and adaptive harnesses, records traces, and emits JSON or Markdown
+reports. The next milestones make policy and compiled harness specs the primary
+runtime artifacts.
 
 ## Install
 
@@ -95,19 +96,23 @@ Anthropic are useful strong-model baselines, but AdaHarness is especially aimed
 at comparing harness choices for open, local, and OpenAI-compatible models where
 the right orchestration layer may have a larger effect.
 
+See `docs/use-cases.md` for the target users, application scenarios, migration
+workflow, and artifact model.
+
 ## Why
 
 Agent performance is not only a property of the base model. It is shaped by the
 surrounding harness: planning, tools, memory, retries, verification, context
 management, and runtime policy.
 
-AdaHarness explores how harnesses should adapt as models become more capable.
+AdaHarness treats the harness as something compiled from the model profile, not
+hard-coded once.
 
 ## What AdaHarness Is Not
 
 AdaHarness is not a replacement for LangChain, LangGraph, OpenAI Agents SDK, or
-other agent runtimes. It is an evaluation-first adaptive harness layer that can
-sit above different runtimes.
+other agent runtimes. It is a runtime-agnostic harness policy and assembly layer
+that can sit above different runtimes.
 
 ## MVP Scope
 

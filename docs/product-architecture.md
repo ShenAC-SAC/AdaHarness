@@ -1,7 +1,7 @@
 # Product Architecture
 
 AdaHarness is not just a benchmark and not a general agent framework. It is a
-policy-driven modular harness compiler.
+model-aware, policy-driven modular harness compiler.
 
 ## Core Definition
 
@@ -13,6 +13,12 @@ The core flow is:
 
 ```text
 ModelProfile -> HarnessPolicy -> HarnessSpec -> ModularHarness -> RunTrace -> PolicyRefinement
+```
+
+The product thesis is:
+
+```text
+When you change the model, you may need to change the harness. AdaHarness tells you how.
 ```
 
 ## Core Objects
@@ -34,6 +40,7 @@ ModelProfile -> HarnessPolicy -> HarnessSpec -> ModularHarness -> RunTrace -> Po
 | Assemble | `assemble` | Compile policy into `HarnessSpec`. |
 | Run | `run` | Execute a task with an assembled harness. |
 | Refine | future `refine` | Propose policy updates from traces. |
+| Migrate | future `migrate` | Compare old and new model policies and produce a harness migration plan. |
 
 ## Layer Boundaries
 
@@ -58,3 +65,6 @@ report.md          human explanation and evidence
 
 `compare` output is supporting evidence. The durable output is the policy and
 compiled harness spec.
+
+See `docs/use-cases.md` for target users, model migration scenarios, output
+artifacts, and migration metrics.

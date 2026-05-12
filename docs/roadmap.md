@@ -1,7 +1,7 @@
 # Roadmap
 
-AdaHarness is moving from synthetic harness comparison toward a policy-driven
-modular harness system. The main product path is:
+AdaHarness is moving from synthetic harness comparison toward a model-aware,
+policy-driven modular harness system. The main product path is:
 
 ```text
 profile -> recommend -> assemble -> run -> trace -> refine
@@ -9,6 +9,15 @@ profile -> recommend -> assemble -> run -> trace -> refine
 
 `compare` remains important, but its role is to validate policy and harness
 choices, not to be the final product output.
+
+The migration path is equally important:
+
+```text
+old profile + new profile + old policy -> migrate -> policy diff + module diff + migration plan
+```
+
+See `docs/use-cases.md` for the target users and application scenarios behind
+this roadmap.
 
 ## v0.2 Policy as Primary Artifact
 
@@ -74,7 +83,21 @@ Goal: generate different policies for different model profiles.
 Acceptance: weak and strong profiles produce different policy JSON and different
 harness specs.
 
-## v0.7 Trace-Backed Policy Refinement
+## v0.7 Harness Migration and Policy Diff
+
+Goal: help users change models without carrying the wrong harness forward.
+
+- Add policy diff and module diff reporting.
+- Add migration metrics such as harness drift, policy delta, underconstraint
+  risk, and overconstraint penalty.
+- Add `migrate` to compare old and new model profiles against an existing
+  policy.
+- Recommend whether to weaken, strengthen, or keep each major harness module.
+
+Acceptance: `adaharness migrate --from-profile ... --to-profile ... --from-policy ...`
+produces a migration report with policy and module changes.
+
+## v0.8 Trace-Backed Policy Refinement
 
 Goal: use completed runs to propose improved policies offline.
 
@@ -84,7 +107,7 @@ run with policy -> collect trace -> analyze failure modes -> propose policy -> a
 
 This is still offline adaptation, not online mutation during a run.
 
-## v0.8 External Trace Import
+## v0.9 External Trace Import
 
 Goal: evaluate external agent runtimes without executing them directly.
 
@@ -94,7 +117,7 @@ Goal: evaluate external agent runtimes without executing them directly.
 
 Non-goal: direct LangGraph, OpenAI Agents SDK, or Claude Agent SDK execution.
 
-## v0.9 Online Adaptive Modules
+## v0.10 Online Adaptive Modules
 
 Goal: update active modules during runtime.
 

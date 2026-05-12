@@ -15,6 +15,11 @@ most complex one.
 - `minimal_effective_harness_score`: success adjusted by harness tax.
 - `overconstraint_penalty`: cost and latency penalty not justified by lift.
 - `adaptation_gain`: adaptive MEH score compared with the best fixed harness.
+- `harness_drift_score`: mismatch between an existing policy and a replacement
+  model's recommended policy.
+- `underconstraint_risk`: expected failure risk when a weak model receives too
+  little planning, verification, retry, or tool control.
+- `policy_delta`: size of the change between two policies or module specs.
 
 ## Interpretation
 
@@ -31,6 +36,10 @@ adaharness report runs/compare.json
 
 The report table is the first place to check whether `adaptive` is choosing a
 reasonable tradeoff compared with fixed `bare`, `light`, and `strong` presets.
+
+For model migration, the main question is whether the old harness still fits the
+new model. High drift means the user should inspect policy and module diffs
+before shipping the replacement model.
 
 Matrix reports compare `model x harness` combinations:
 

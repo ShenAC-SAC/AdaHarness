@@ -1,7 +1,8 @@
 # CLI Workflow
 
 The primary AdaHarness workflow is `profile -> recommend -> assemble -> run`.
-`compare` remains a research and validation command.
+`compare` remains a research and validation command. `migrate` and `refine`
+become the commands for changing harnesses after model or trace evidence changes.
 
 ## Primary Path
 
@@ -43,3 +44,17 @@ adaharness compare \
 
 `compare` helps validate whether a policy or spec is effective. It should not
 replace policy and spec artifacts.
+
+## Migration Path
+
+```bash
+adaharness migrate \
+  --from-profile runs/model-a-profile.json \
+  --to-profile runs/model-b-profile.json \
+  --from-policy runs/model-a-policy.json \
+  --taskset tasks/production-regression \
+  --out runs/model-a-to-model-b-migration.md
+```
+
+The migration report should include policy diffs, module diffs, harness drift,
+overconstraint penalty, underconstraint risk, and recommended next actions.
