@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from adaharness.evals.runner import compare_harnesses
+from adaharness.evals.runner import compare_harness_runs
 from adaharness.evals.task_schema import load_taskset
 from adaharness.harnesses import BARE_HARNESS, LIGHT_HARNESS, STRONG_HARNESS, build_adaptive_harness
 from adaharness.harnesses.base import Harness
@@ -62,12 +62,13 @@ def cmd_compare(args: argparse.Namespace) -> int:
         STRONG_HARNESS,
         build_adaptive_harness(profile),
     ]
-    metrics = compare_harnesses(profile, harnesses, tasks)
+    metrics, runs = compare_harness_runs(profile, harnesses, tasks)
     data = {
         "model_name": profile.model_name,
         "profile": profile.to_dict(),
         "task_count": len(tasks),
         "results": [item.to_dict() for item in metrics],
+        "runs": [run.to_dict() for run in runs],
     }
     if args.out:
         _write_json(Path(args.out), data)

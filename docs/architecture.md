@@ -11,9 +11,11 @@ agent framework.
   capability dimensions.
 - `adaharness/policies/` maps a profile to a `HarnessPolicy`.
 - `adaharness/harnesses/` defines fixed presets and builds the adaptive harness.
+- `adaharness/harnesses/runtime.py` defines executable runtime strategies for
+  those presets without turning preset metadata into mutable execution state.
 - `adaharness/evals/` loads task fixtures, estimates task success, and computes
-  comparative metrics.
-- `adaharness/runtime/` contains early state, budget, and tracing primitives.
+  comparative metrics from run results.
+- `adaharness/runtime/` contains state, budget, result, and tracing primitives.
 - `adaharness/cli.py` wires the pipeline into `profile`, `recommend`, `compare`,
   and `report` commands.
 
@@ -43,3 +45,12 @@ Model support is protocol-first rather than brand-first. DeepSeek, Qwen, vLLM,
 LM Studio, and similar endpoints should use the `openai-compatible` boundary
 when they expose that protocol. Native provider adapters are reserved for real
 protocol differences, not marketing names.
+
+The runtime data flow is:
+
+```text
+EvalTask + HarnessPolicy + ModelClient -> HarnessRuntime -> RunResult + RunTrace
+```
+
+Metrics are aggregates over `RunResult`, and reports should increasingly explain
+their scores from `RunTrace` evidence rather than opaque estimates.
