@@ -44,6 +44,9 @@ enable, their configuration, and the runtime capabilities required to support
 them. In the reference runtime those controls map to AdaHarness modules. In an
 external runtime they must map through an adapter.
 
+A spec should expose `source_policy`, `requirements`, and `adapter_hints` at the
+top level so adapters can reject unsupported control plans before execution.
+
 ## What Adapters Control
 
 A `RuntimeAdapter` inspects a runtime's capabilities and produces a

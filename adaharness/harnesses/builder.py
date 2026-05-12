@@ -13,7 +13,7 @@ class HarnessBuilder:
     registry: ModuleRegistry = field(default_factory=lambda: DEFAULT_MODULE_REGISTRY)
 
     def build(self, spec: HarnessSpec) -> ModularHarness:
-        source_policy = spec.metadata.get("source_policy")
+        source_policy = spec.source_policy or spec.metadata.get("source_policy")
         if not isinstance(source_policy, dict):
             raise ValueError("HarnessSpec metadata.source_policy is required")
         modules = tuple(self.registry.create(module_spec) for module_spec in spec.modules if module_spec.enabled)

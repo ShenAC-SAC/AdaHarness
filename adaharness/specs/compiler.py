@@ -29,7 +29,49 @@ def compile_policy_to_spec(
         "source_policy": policy.to_dict(),
         **(metadata or {}),
     }
-    return HarnessSpec(name=name, modules=tuple(modules), metadata=spec_metadata)
+    return HarnessSpec(
+        name=name,
+        modules=tuple(modules),
+        metadata=spec_metadata,
+        source_policy=policy.to_dict(),
+        requirements=_requirements_for(modules),
+        adapter_hints=_adapter_hints_for(modules),
+    )
+
+
+def _requirements_for(modules: list[ModuleSpec]) -> dict[str, bool]:
+    enabled = {module.name for module in modules if module.enabled}
+    return {
+        "supports_pre_model_hook": bool(
+            enabled & {"planner", "context_manager", "budget_guard"}
+        ),
+        "supports_post_model_hook": "verifier" in enabled,
+        "supports_tool_interception": "tool_gatekeeper" in enabled,
+        "supports_tool_execution": "tool_executor" in enabled,
+        "supports_retry_loop": bool(enabled & {"retry_controller", "recovery"}),
+        "supports_subagents": "subagent_router" in enabled,
+        "supports_trace_export": "trace" in enabled,
+    }
+
+
+def _adapter_hints_for(modules: list[ModuleSpec]) -> dict[str, Any]:
+    hooks = []
+    if any(module.enabled and module.name in {"planner", "context_manager", "budget_guard"} for module in modules):
+        hooks.append("before_model_call")
+    if any(module.enabled and module.name == "verifier" for module in modules):
+        hooks.append("after_model_call")
+    if any(module.enabled and module.name == "tool_gatekeeper" for module in modules):
+        hooks.append("before_tool_call")
+    if any(module.enabled and module.name == "tool_executor" for module in modules):
+        hooks.append("tool_execution")
+    if any(module.enabled and module.name in {"retry_controller", "recovery"} for module in modules):
+        hooks.append("on_retry")
+    if any(module.enabled and module.name == "trace" for module in modules):
+        hooks.append("trace_export")
+    return {
+        "preferred_integration": "middleware",
+        "required_hooks": hooks,
+    }
 
 
 def _trace_module() -> ModuleSpec:
