@@ -1,88 +1,60 @@
 # Architecture
 
-AdaHarness is organized as an embedded-first harness calibration and control
-compiler rather than a full agent framework. It is the control plane that
-decides how strongly an agent project should plan, verify, retry, tool-gate,
-manage context, and budget autonomy. The user's agent runtime remains the data
-plane that executes model calls, tools, state, streaming, and approvals.
+AdaHarness is being reduced to a trace-first harness drift analyzer. The MVP
+does not control the user's runtime. It reads traces or eval results from an
+existing agent project, computes harness metrics, diagnoses overconstraint or
+underconstraint, and suggests policy diffs.
 
-The product flow is:
-
-```text
-ProjectAgentAdapter -> ProjectRunTrace -> AgentSystemProfile
-  -> HarnessPolicy -> HarnessSpec -> RuntimeBinding -> project runtime hooks
-```
-
-The reference runtime flow is:
+The MVP flow is:
 
 ```text
-ModelProfile -> HarnessPolicy -> HarnessSpec -> ModularHarness -> RunTrace
+Trace JSONL -> TraceMetrics -> HarnessDiagnosis -> PolicyDiff -> Report
 ```
 
-`ModularHarness` is a validation runtime for local experiments and CI. It is not
-the expected production runtime for users who already have LangGraph, OpenAI
-Agents SDK, Claude Agent SDK, or a custom agent loop.
+This keeps integration light: users can export logs without adopting AdaHarness
+modules, adapters, or runtime hooks.
 
 ## Package Boundaries
 
-- `adaharness/models/` defines model configuration, the `ModelClient` protocol,
-  structured responses, and provider adapter boundaries for lab runs.
-- `adaharness/project/` owns project-local calibration interfaces: project
-  adapters, project run results, agent-system profiles, and calibration
-  artifacts.
-- `adaharness/profiler/` produces a `ModelProfile` describing agent-relevant
-  capability dimensions. Project calibration should later lift this into an
-  `AgentSystemProfile`.
-- `adaharness/policies/` maps a profile to `HarnessPolicy`, migration reports,
-  and trace-backed refinements.
-- `adaharness/specs/` compiles `HarnessPolicy` into runtime-neutral
-  `HarnessSpec` controller plans.
-- `adaharness/modules/` implements reference planner, verifier, retry, budget,
-  context, tool, and trace behavior for local validation.
-- `adaharness/harnesses/` contains preset harnesses and the reference
-  `ModularHarness`.
-- `adaharness/integrations/` normalizes external traces without executing
-  external runtimes.
-- `adaharness/evals/` loads task fixtures, estimates task success, and computes
-  comparative metrics from run results.
-- `adaharness/runtime/` contains state, budget, result, and tracing primitives.
-- `adaharness/adapters/` binds controller specs to existing runtime hooks.
-- `adaharness/cli.py` wires project-local calibration and lab commands.
+- `adaharness/analysis/` owns trace ingestion, metrics, diagnosis, policy diff
+  recommendation, and report rendering.
+- `adaharness/integrations/` normalizes richer external trace formats into
+  AdaHarness-compatible traces.
+- `adaharness/policies/` keeps policy schemas and diff helpers used by reports.
+- `adaharness/cli.py` should make `analyze` the main MVP command.
+- `adaharness/project/`, `adaharness/adapters/`, `adaharness/specs/`,
+  `adaharness/modules/`, and `adaharness/harnesses/` are experimental
+  scaffolding from the earlier control-layer direction.
 
-## Current Runtime Shape
+## Trace Contract
 
-Current profiling remains deterministic and model-centric. Provider clients
-exist, and `run` can call them through `ModelClient`, but project-local
-calibration is still the main gap.
+The first trace contract should be simple JSONL. Each line is one event:
 
-The provider boundary is separate:
-
-```text
-ModelConfig -> ModelClient -> ModelResponse
+```json
+{"task_id":"t1","event":"verifier","status":"pass","cost":0.002}
+{"task_id":"t1","event":"retry","reason":"tool_failure"}
+{"task_id":"t1","event":"final","success":true,"cost":0.012,"latency_ms":2200}
 ```
 
-Provider-specific SDKs are optional dependencies and must stay behind
-`adaharness.models`. Profilers and harness runtimes should depend on the
-`ModelClient` protocol, not on OpenAI, Anthropic, or local HTTP clients directly.
+AdaHarness should prefer observable metrics over abstract model scores:
 
-Model support is protocol-first rather than brand-first. DeepSeek, Qwen, vLLM,
-LM Studio, and similar endpoints should use the `openai-compatible` boundary
-when they expose that protocol. Native provider adapters are reserved for real
-protocol differences, not marketing names.
+- verifier catch rate
+- verifier cost share
+- retry success and waste rate
+- planner latency share
+- tool failure rate
+- tool result ignored rate
+- success, cost, and latency deltas
 
-The reference runtime data flow is:
+## Experimental Layers
+
+The earlier control-layer architecture remains useful as a future direction, but
+it should not define the MVP:
 
 ```text
-EvalTask + HarnessPolicy + ModelClient -> HarnessRuntime -> RunResult + RunTrace
+HarnessPolicy -> HarnessSpec -> RuntimeBinding -> runtime hooks
 ```
 
-Metrics are aggregates over `RunResult`, and reports should explain their scores
-from `RunTrace` evidence where possible.
-
-Standalone reference runs are useful for AdaHarness development, examples, and
-CI. User-facing policy value should come from a project adapter or imported
-project traces, because the effective harness depends on the host runtime,
-prompts, tools, task distribution, and failure modes.
-
-See `docs/concepts/control-surface.md` for controller semantics and
-`docs/concepts/policy-layer.md` for the control-plane boundary.
+Those layers can become valuable after trace-based diagnostics prove that
+AdaHarness can give recommendations users trust. Until then, they should stay
+out of the primary user path.

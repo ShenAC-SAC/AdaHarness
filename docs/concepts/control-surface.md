@@ -1,5 +1,9 @@
 # Harness Control Surface
 
+This document describes an experimental future control layer. The current MVP is
+trace-first diagnosis and suggested policy diffs; it does not require users to
+adopt controller specs or runtime bindings.
+
 AdaHarness should not treat a harness as a set of binary module switches. Its
 core artifact is a control surface: a parameterized plan for how strongly an
 agent runtime should plan, verify, retry, manage tools, manage context, and
@@ -80,5 +84,5 @@ to hooks such as `before_model_call`, `after_tool_call`, `before_final`, and
 `on_failure`. The reference runtime maps controllers to AdaHarness modules only
 to validate behavior locally.
 
-This keeps AdaHarness as a harness control compiler rather than a replacement
-agent runtime.
+This may become useful after the trace-first analyzer proves that its
+recommendations are trustworthy.

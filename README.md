@@ -1,46 +1,50 @@
 # AdaHarness
 
-Embedded-first harness calibration and control compiler for LLM agent projects.
+Harness drift analyzer and calibration advisor for LLM agent projects.
 
-AdaHarness evaluates an agent project, derives model/runtime capability signals,
-generates a `HarnessPolicy`, and compiles a runtime-neutral control spec for how
-much planning, verification, retry, tool control, context management, and
-autonomy that project should use.
+AdaHarness reads agent traces and eval results, detects whether the current
+harness is over-controlling or under-controlling the model, and suggests
+evidence-backed policy changes.
 
 When models, tools, prompts, or tasks change, the optimal harness control surface
-often changes too. AdaHarness helps detect harness drift, reduce overconstraint,
-add control where needed, and export policy/spec/binding artifacts for the
-project runtime.
+often changes too. AdaHarness helps answer the first practical question:
+
+> Did this change make our existing harness too heavy, too weak, or still
+> appropriate?
 
 ## Research Question
 
-Most agent systems use a fixed harness across changing models, prompts, tools,
-and task distributions. AdaHarness starts from a different assumption:
+Most agent systems keep the same planning, verification, retry, and tool-control
+logic across changing models, prompts, tools, and task distributions. AdaHarness
+starts from a different assumption:
 
 > When the agent system changes, you may need to recalibrate harness controls.
 
-A smaller model may need explicit planning, strict tool gating, retries, and
-verification in one project, while the same model may need different controls in
-another project with different tools, prompts, and failure modes.
+A smaller model may need stricter control. A stronger model may be slowed down
+by controls that no longer improve success. AdaHarness should make that drift
+visible from traces before it tries to control any runtime.
 
 ## Core Ideas
 
-- Project-local calibration from tasks and traces
-- `HarnessPolicy` generation
-- `HarnessPolicy -> HarnessSpec` control compilation
-- `HarnessSpec -> RuntimeBinding` adapter reports
-- Model migration and policy/controller diff reporting
-- Harness lift, harness tax, drift, and overconstraint measurement
-- Runtime tracing for future policy refinement
+- Trace ingestion from existing agent projects
+- Harness metrics such as verifier catch rate, retry success rate, cost share,
+  and latency overhead
+- Overconstraint and underconstraint diagnosis
+- Suggested policy diffs backed by trace evidence
+- Model migration and harness drift reports
+- Lightweight trace recorder SDK in future versions
 
 ## Current Status
 
 Early experimental MVP.
 
-The current version has the policy, spec, controller, binding, config, reference
-runtime, trace-import, and project calibration foundations. Project calibration
-can run tasks through a host adapter and produce profile, policy, spec, binding,
-runs, and report artifacts.
+The current codebase still contains earlier policy compiler, adapter, and
+reference runtime foundations. Those are now considered experimental. The MVP is
+being reduced to a lighter loop:
+
+```text
+traces -> metrics -> diagnosis -> suggested policy diff -> report
+```
 
 ## Install
 
@@ -48,73 +52,37 @@ runs, and report artifacts.
 uv sync --group dev
 ```
 
-## Embedded Usage
+## MVP Usage
 
-AdaHarness should usually be imported by an existing agent project. The project
-keeps ownership of model providers, credentials, tools, prompts, and runtime
-state.
+The intended MVP flow is trace-first. A project exports JSONL traces or eval
+results, then AdaHarness analyzes harness drift:
 
-```python
-from adaharness import calibrate_agent_project
-from adaharness.adapters import AdapterCapabilities
-
-class MyAgentAdapter:
-    name = "my-agent"
-
-    def capabilities(self):
-        return AdapterCapabilities(
-            supports_pre_model_hook=True,
-            supports_post_model_hook=True,
-            supports_tool_interception=True,
-            supports_retry_loop=True,
-            supports_trace_export=True,
-        )
-
-    def run_task(self, task, *, binding=None):
-        # Delegate to the host project's own model config, prompts, tools, and runtime.
-        return my_agent_run_task(task, binding=binding)
-
-result = calibrate_agent_project(
-    MyAgentAdapter(),
-    tasks=my_calibration_tasks,
-    risk="medium",
-    budget="standard",
-)
-binding = result.binding
+```bash
+uv run adaharness analyze \
+  --traces traces/new-model.jsonl \
+  --current-policy policies/current.json \
+  --out reports/harness-drift.md
 ```
 
-For lower-level integrations, projects can still build artifacts directly:
+Trace events can start small:
 
-```python
-from adaharness import bind_harness_spec, compile_harness_spec, recommend_harness_policy
-
-recommendation = recommend_harness_policy(project_profile)
-spec = compile_harness_spec(recommendation, name="my-agent-controls")
-binding = bind_harness_spec(
-    spec,
-    runtime="my-agent",
-    capabilities=AdapterCapabilities(
-        supports_pre_model_hook=True,
-        supports_post_model_hook=True,
-        supports_tool_interception=True,
-        supports_retry_loop=True,
-        supports_trace_export=True,
-    ),
-)
+```json
+{"task_id":"t1","event":"planner","latency_ms":320}
+{"task_id":"t1","event":"verifier","status":"pass","cost":0.002}
+{"task_id":"t1","event":"retry","reason":"tool_failure"}
+{"task_id":"t1","event":"final","success":true,"cost":0.012,"latency_ms":2200}
 ```
 
-`binding` tells the host project which controllers map to which runtime hooks,
-including levels, triggers, budgets, and escalation settings.
+AdaHarness should produce a report explaining whether controls are useful,
+wasteful, or missing.
 
 ## Project-Local CLI
 
-The CLI is not intended to be the production agent runner. It is a project-local
-calibration, regression, trace-import, and artifact-generation tool. In a real
-agent project, provider credentials should normally stay in that project.
+The CLI is not intended to be the production agent runner. It is an analysis and
+CI tool for traces exported by the user's existing agent project. Provider
+credentials should normally stay in that project.
 
-For CLI experiments or CI, project configuration can live in `adaharness.toml`,
-with secrets in `.env` only when AdaHarness itself owns the lab model call. For
-embedded calibration, config should point to the host project's adapter:
+The previous project adapter flow remains experimental:
 
 ```toml
 [project]
@@ -177,9 +145,8 @@ Anthropic are useful strong-model baselines, but AdaHarness is especially aimed
 at comparing harness choices for open, local, and OpenAI-compatible models where
 the right orchestration layer may have a larger effect.
 
-See `docs/concepts/control-surface.md` for the controller model,
-`docs/concepts/policy-layer.md` for the control-plane boundary, and
-`docs/use-cases.md` for target users, migration workflows, and artifacts.
+See `docs/architecture.md`, `docs/roadmap.md`, and `docs/use-cases.md` for the
+current trace-first MVP boundary.
 
 ## Why
 
@@ -187,25 +154,25 @@ Agent performance is not only a property of the base model. It is shaped by the
 surrounding harness: planning, tools, memory, retries, verification, context
 management, and runtime policy.
 
-AdaHarness treats harness control strength as something calibrated from the
-agent project's model, runtime, task distribution, traces, risk, and budget, not
-hard-coded once.
+AdaHarness treats harness control strength as something diagnosed from actual
+runtime evidence, not inferred from abstract model scores alone.
 
 ## What AdaHarness Is Not
 
 AdaHarness is not a replacement for LangChain, LangGraph, OpenAI Agents SDK, or
-other agent runtimes. It is a runtime-agnostic harness policy and control layer
-that can sit above different runtimes.
+other agent runtimes. It should not require users to hand over runtime control
+for the MVP. Runtime binding and adapter-based control are experimental.
 
 ## MVP Scope
 
-Version 0.1 focuses on harness selection, not open-ended harness generation.
+Version 0.1 focuses on trace analysis:
 
-- `bare`: minimal orchestration
-- `light`: light planning and bounded retries
-- `structured`: explicit planning, bounded retries, and selective verification
-- `strong`: strict planning, strict tool gating, and always-on verification
-- `adaptive`: selected from a model profile using a deterministic rule-based policy
+- ingest JSONL traces
+- compute harness metrics
+- flag overconstraint and underconstraint signals
+- recommend policy diffs
+- render a Markdown report
 
-Later versions can add LLM-generated policies, online policy changes, and richer
-task domains.
+Policy compilers, runtime bindings, project adapters, and the reference runtime
+remain available as experimental scaffolding while the trace-first MVP proves
+its value.

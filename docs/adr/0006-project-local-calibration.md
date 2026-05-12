@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Superseded by ADR 0007.
 
 ## Context
 
@@ -38,3 +38,9 @@ configuration, prompts, tools, state, and production execution.
   lab commands.
 - New APIs should accept project adapters, imported traces, or host-provided
   profiles rather than forcing duplicate provider configuration.
+
+## Superseded By
+
+ADR 0007 narrows the MVP further. Project-local calibration and adapters remain
+experimental; the primary MVP path is trace-first diagnosis and suggested policy
+diffs.

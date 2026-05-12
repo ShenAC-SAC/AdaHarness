@@ -7,7 +7,7 @@ a bespoke adapter for every model brand.
 
 | Boundary | Use for | Notes |
 | --- | --- | --- |
-| `synthetic` | deterministic MVP profiling | No network or credentials. |
+| `synthetic` | deterministic lab profiling | No network or credentials. |
 | `mock` | tests and examples | Returns structured fake responses. |
 | `openai-compatible` | OpenAI, DeepSeek, Qwen-compatible APIs, OpenRouter, vLLM, LM Studio | Use `--base-url` for non-OpenAI endpoints. |
 | `anthropic` | Claude models through Anthropic's SDK | Useful as a strong proprietary baseline. |
@@ -36,8 +36,8 @@ the provider-specific `--base-url` and environment setup.
 
 ## Project Configuration
 
-Provider URLs and provider-specific API key environment variables should live in
-`adaharness.toml`, not repeated command lines:
+Provider URLs and provider-specific API key environment variables may live in
+`adaharness.toml` for lab commands that call models directly:
 
 ```toml
 [providers.deepseek]

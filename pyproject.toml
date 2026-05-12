@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "adaharness"
 version = "0.1.0"
-description = "Model-aware harness compiler for LLM agents."
+description = "Harness drift analyzer for LLM agent projects."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }

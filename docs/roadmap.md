@@ -1,94 +1,92 @@
 # Roadmap
 
-AdaHarness is now centered on:
+AdaHarness is now centered on a lighter MVP:
 
 ```text
-ProjectAgentAdapter -> ProjectRunTrace -> AgentSystemProfile
-  -> HarnessControlPolicy
-  -> HarnessControlSpec
-  -> RuntimeBinding
-  -> ProjectRuntimeHooks
+Agent traces -> harness metrics -> diagnosis -> suggested policy diff -> report
 ```
 
-The CLI should be project-local first:
+The CLI should analyze exported traces first:
 
 ```text
-calibrate -> recommend -> compile -> bind -> validate -> report
+analyze -> diagnose -> recommend diff -> report
 ```
 
-Standalone reference commands remain a lab environment for AdaHarness
-development and smoke tests. `ModularHarness` remains a reference runtime for
-validation, not the product boundary.
+Policy compilers, runtime bindings, project adapters, and `ModularHarness`
+remain experimental scaffolding. They are not the MVP product boundary.
 
 ## Completed Foundation
 
-- Reusable `HarnessPolicy` recommendation artifacts with risk and budget inputs.
-- `HarnessPolicy -> HarnessSpec` compilation.
-- Reference `ModuleRegistry`, `HarnessBuilder`, and `ModularHarness`.
-- Policy-driven reference runtime hooks and online retry adaptation.
-- Migration reports with policy diffs, controller diffs, and drift metrics.
-- Trace-backed offline refinement.
+- Harness policy, controller spec, binding, project adapter, and reference
+  runtime scaffolding.
 - Generic external trace normalization.
-- Public API, project config, adapter capabilities, and runtime binding reports.
+- Migration and policy-diff prototypes.
 
-## Phase 1 Project-Embedded Positioning
+## Phase 1 Trace Ingestion
 
-Goal: make the product story project-local rather than standalone benchmark
-first.
+Goal: make AdaHarness useful without runtime integration.
 
-- Update README and docs so the main path starts inside an existing agent
-  project.
-- Move reference runtime and mock task flows to lab/development status.
-- Explain that the host project owns model configuration, prompts, tools, and
-  runtime state.
+- Define a small JSONL trace event format.
+- Load traces from one or more files.
+- Group events by task, model, and optional policy.
+- Accept traces exported by user projects without requiring adapters.
 
-Acceptance: new users see AdaHarness as project calibration and control binding,
-not a standalone model benchmark.
+Acceptance: `adaharness analyze --traces traces.jsonl` can load events and
+produce a basic metrics object.
 
-## Phase 2 Project Agent Adapter
+## Phase 2 Harness Diagnostics
 
-Goal: define how AdaHarness evaluates a host agent project.
+Goal: diagnose over-control and under-control from observable signals.
 
-- Add `ProjectAgentAdapter`, `ProjectRunResult`, and `CalibrationResult`.
-- Let adapters report runtime capabilities, run project tasks, and export
-  traces.
-- Keep the first adapter contract simple and synchronous.
+- Compute verifier catch rate, verifier cost share, retry success rate, retry
+  waste rate, planner latency share, tool failure rate, and success rate.
+- Add explicit overconstraint and underconstraint signals.
+- Include evidence lines for every diagnosis.
 
-Acceptance: a small custom adapter can run a task and produce traces without
-reconfiguring model credentials in AdaHarness.
+Acceptance: the report can explain why a harness looks too heavy, too weak, or
+roughly appropriate.
 
-## Phase 3 Agent System Profile
+## Phase 3 Policy Diff Recommendation
 
-Goal: derive policy from project evidence, not only standalone model scores.
+Goal: suggest changes without controlling the user's runtime.
 
-- Add `AgentSystemProfile` as a composed profile over model signals, runtime
-  capabilities, task profile, trace evidence, and failure modes.
-- Add trace-backed conversion from project runs to profile signals.
-- Keep `ModelProfile` as the current compatibility input.
+- Load an optional current policy JSON.
+- Recommend changes such as `always -> selective`, `explicit -> light`, or
+  `aggressive -> bounded`.
+- Attach a reason and evidence to every suggested change.
 
-Acceptance: `calibrate_project(...)` can recommend a policy from project task
-results and runtime capabilities.
+Acceptance: `analyze` writes `policy_diff.json` and a human-readable report.
 
-## Phase 4 Project-Local CLI
+## Phase 4 Migration Report
 
-Goal: make CLI useful after AdaHarness is installed in a host project.
+Goal: compare old and new traces after model, prompt, tool, or task changes.
 
-- Add `calibrate`, `validate`, and `bind` commands around project config.
-- Treat existing `profile`, `compare`, and reference `run` flows as lab commands
-  or compatibility commands.
-- Avoid duplicating provider credentials when an adapter owns model access.
+- Accept `--baseline-traces` and `--candidate-traces`.
+- Report drift in success, cost, latency, verifier usefulness, retry usefulness,
+  and tool failure behavior.
+- Recommend whether the current harness should be weakened, strengthened, or
+  left unchanged.
 
-Acceptance: users can run `adaharness calibrate --config adaharness.toml` inside
-their agent repo and receive profile, policy, spec, binding, trace, and report
-artifacts.
+Acceptance: migration reports explain whether the old harness still fits the new
+system behavior.
 
-## Phase 5 Reference Runtime Behavior
+## Phase 5 Minimal Trace SDK
 
-Goal: make the reference runtime useful as a validation lab.
+Goal: reduce integration friction further.
 
-- Implement graded planner behavior first: `hint`, `light`, `conditional`,
-  `explicit`, and `strict`.
-- Then implement verifier and retry levels.
-- Add deterministic fake tools and task-backed verification.
+- Add a small `TraceRecorder` helper for agent projects.
+- Keep it optional; users can still export JSONL manually.
+- Do not add runtime control or hook mutation.
 
-Acceptance: reference traces show behavioral differences beyond trace markers.
+Acceptance: a host project can record AdaHarness-compatible traces in a few
+lines of code.
+
+## Experimental
+
+These pieces remain in the codebase but are not the MVP path:
+
+- `ProjectAgentAdapter`
+- `RuntimeBinding`
+- `HarnessSpec` compiler
+- reference `ModularHarness`
+- online adaptation and controller binding
