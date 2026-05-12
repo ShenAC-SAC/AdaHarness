@@ -13,6 +13,8 @@ harness evolution while keeping each stage independently useful and testable.
 
 - Introduce a stable `ModelClient` protocol.
 - Add OpenAI-compatible, Anthropic-compatible, and local HTTP adapter paths.
+- Treat DeepSeek, Qwen, OpenRouter, vLLM, and LM Studio as protocol-level
+  support targets where possible, not separate brand adapters.
 - Keep provider dependencies optional.
 
 ## v0.3 Capability Profiler
@@ -38,10 +40,6 @@ harness evolution while keeping each stage independently useful and testable.
 These are future GitHub issue candidates when public task tracking becomes
 useful. Keep them in the roadmap for now.
 
-- `feat(models): define ModelClient protocol`
-- `feat(models): implement MockModelClient`
-- `feat(models): add OpenAI-compatible adapter`
-- `feat(models): add Anthropic adapter`
 - `feat(runtime): define RunTrace schema`
 - `feat(profiler): define capability task schema`
 - `docs(research): document Minimal Effective Harness`

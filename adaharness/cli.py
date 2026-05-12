@@ -9,6 +9,7 @@ from adaharness.evals.runner import compare_harnesses
 from adaharness.evals.task_schema import load_taskset
 from adaharness.harnesses import BARE_HARNESS, LIGHT_HARNESS, STRONG_HARNESS, build_adaptive_harness
 from adaharness.harnesses.base import Harness
+from adaharness.models import SUPPORTED_PROVIDERS, ModelConfig, build_model_config
 from adaharness.policies.generator import generate_policy
 from adaharness.profiler.profile_schema import ModelProfile
 from adaharness.profiler.runner import run_profiler
@@ -23,8 +24,12 @@ def _load_profile(path: Path) -> ModelProfile:
     return ModelProfile.from_dict(json.loads(path.read_text(encoding="utf-8")))
 
 
+def _model_config_from_args(args: argparse.Namespace) -> ModelConfig:
+    return build_model_config(args.model, provider=args.provider, base_url=args.base_url)
+
+
 def cmd_profile(args: argparse.Namespace) -> int:
-    profile = run_profiler(args.model)
+    profile = run_profiler(_model_config_from_args(args))
     data = profile.to_dict()
     if args.out:
         _write_json(Path(args.out), data)
@@ -45,7 +50,7 @@ def cmd_recommend(args: argparse.Namespace) -> int:
 
 
 def cmd_compare(args: argparse.Namespace) -> int:
-    profile = run_profiler(args.model)
+    profile = run_profiler(_model_config_from_args(args))
     if args.profile:
         profile = _load_profile(Path(args.profile))
 
@@ -95,6 +100,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     profile = subparsers.add_parser("profile", help="Run model profiler")
     profile.add_argument("--model", required=True)
+    profile.add_argument("--provider", choices=SUPPORTED_PROVIDERS, default="synthetic")
+    profile.add_argument("--base-url")
     profile.add_argument("--out")
     profile.set_defaults(func=cmd_profile)
 
@@ -104,6 +111,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     compare = subparsers.add_parser("compare", help="Compare harness presets")
     compare.add_argument("--model", required=True)
+    compare.add_argument("--provider", choices=SUPPORTED_PROVIDERS, default="synthetic")
+    compare.add_argument("--base-url")
     compare.add_argument("--profile")
     compare.add_argument("--taskset", required=True)
     compare.add_argument("--out")

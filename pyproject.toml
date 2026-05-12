@@ -15,6 +15,12 @@ authors = [
 keywords = ["llm", "agents", "harness", "evaluation", "benchmark"]
 dependencies = []
 
+[project.optional-dependencies]
+openai = ["openai>=1.0"]
+anthropic = ["anthropic>=0.40"]
+local = ["requests>=2.31"]
+all = ["openai>=1.0", "anthropic>=0.40", "requests>=2.31"]
+
 [dependency-groups]
 dev = ["pytest>=8.0", "ruff>=0.8"]
 

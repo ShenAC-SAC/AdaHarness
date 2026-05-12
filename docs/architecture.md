@@ -5,8 +5,8 @@ agent framework.
 
 ## Module Boundaries
 
-- `adaharness/models/` defines model configuration and future provider adapter
-  boundaries.
+- `adaharness/models/` defines model configuration, the `ModelClient` protocol,
+  structured responses, and provider adapter boundaries.
 - `adaharness/profiler/` produces a `ModelProfile` describing agent-relevant
   capability dimensions.
 - `adaharness/policies/` maps a profile to a `HarnessPolicy`.
@@ -23,11 +23,23 @@ Version 0.1 intentionally uses synthetic profiling and deterministic evaluation
 logic. This keeps the harness-selection loop testable before introducing real
 model APIs, tool execution, or online policy updates.
 
-The main data flow is:
+The current selection data flow is:
 
 ```text
 model name -> ModelProfile -> HarnessPolicy -> Harness -> HarnessMetrics -> report
 ```
 
-Future versions should keep provider-specific code behind model adapters and
-avoid mixing model calls directly into policy generation or metric calculation.
+The provider boundary is separate:
+
+```text
+ModelConfig -> ModelClient -> ModelResponse
+```
+
+Provider-specific SDKs are optional dependencies and must stay behind
+`adaharness.models`. Profilers and harness runtimes should depend on the
+`ModelClient` protocol, not on OpenAI, Anthropic, or local HTTP clients directly.
+
+Model support is protocol-first rather than brand-first. DeepSeek, Qwen, vLLM,
+LM Studio, and similar endpoints should use the `openai-compatible` boundary
+when they expose that protocol. Native provider adapters are reserved for real
+protocol differences, not marketing names.

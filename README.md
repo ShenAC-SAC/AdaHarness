@@ -49,6 +49,29 @@ uv run python -m adaharness.cli profile --model example-model
 uv run python -m adaharness.cli compare --model example-model --taskset tasks/eval
 ```
 
+Provider selection is available for the model-adapter boundary. The current
+profiler remains deterministic until task-backed capability profiling is added.
+
+```bash
+uv run adaharness profile --provider mock --model mock-model
+uv run adaharness compare --provider openai-compatible --model gpt-5.5 --taskset tasks/eval
+uv run adaharness compare --provider openai-compatible --model deepseek-chat --base-url <provider-url> --taskset tasks/eval
+uv run adaharness compare --provider openai-compatible --model qwen --base-url <provider-url> --taskset tasks/eval
+```
+
+Optional provider dependencies can be installed when needed:
+
+```bash
+uv sync --group dev --extra openai
+uv sync --group dev --extra anthropic
+uv sync --group dev --extra local
+```
+
+See `docs/models.md` for the model support strategy. In short, OpenAI and
+Anthropic are useful strong-model baselines, but AdaHarness is especially aimed
+at comparing harness choices for open, local, and OpenAI-compatible models where
+the right orchestration layer may have a larger effect.
+
 ## Why
 
 Agent performance is not only a property of the base model. It is shaped by the
