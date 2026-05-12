@@ -15,7 +15,7 @@ minimal effective harness for a given model, task, budget, and risk level.
 
 - Model capability profiling
 - Policy-based harness selection
-- Bare vs light vs strong vs adaptive harness comparison
+- Bare vs light vs structured vs strong vs adaptive harness comparison
 - Harness lift and harness tax measurement
 - Runtime tracing for future harness evolution
 
@@ -64,7 +64,7 @@ Compare multiple model profiles against multiple harnesses:
 ```bash
 uv run adaharness compare \
   --models small-sim,strong-sim \
-  --harnesses bare,light,strong,adaptive \
+  --harnesses bare,light,structured,strong,adaptive \
   --taskset tasks/eval \
   --out runs/model-harness-matrix.json
 
@@ -98,7 +98,8 @@ Version 0.1 focuses on harness selection, not open-ended harness generation.
 
 - `bare`: minimal orchestration
 - `light`: light planning and bounded retries
-- `strong`: explicit planning, strict tool gating, and verification
+- `structured`: explicit planning, bounded retries, and selective verification
+- `strong`: strict planning, strict tool gating, and always-on verification
 - `adaptive`: selected from a model profile using a deterministic rule-based policy
 
 Later versions can add LLM-generated policies, online policy changes, and richer

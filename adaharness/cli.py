@@ -7,7 +7,13 @@ from typing import Any
 
 from adaharness.evals.runner import compare_harness_runs
 from adaharness.evals.task_schema import load_taskset
-from adaharness.harnesses import BARE_HARNESS, LIGHT_HARNESS, STRONG_HARNESS, build_adaptive_harness
+from adaharness.harnesses import (
+    BARE_HARNESS,
+    LIGHT_HARNESS,
+    STRONG_HARNESS,
+    STRUCTURED_HARNESS,
+    build_adaptive_harness,
+)
 from adaharness.harnesses.base import Harness
 from adaharness.models import SUPPORTED_PROVIDERS, ModelConfig, build_model_config
 from adaharness.policies.generator import generate_policy
@@ -39,6 +45,7 @@ def _selected_harnesses(names: list[str], profile: ModelProfile) -> list[Harness
     harnesses = {
         "bare": BARE_HARNESS,
         "light": LIGHT_HARNESS,
+        "structured": STRUCTURED_HARNESS,
         "strong": STRONG_HARNESS,
         "adaptive": build_adaptive_harness(profile),
     }

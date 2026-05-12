@@ -25,7 +25,7 @@ class CliTests(unittest.TestCase):
                     "--models",
                     "small-sim,strong-sim",
                     "--harnesses",
-                    "bare,adaptive",
+                    "bare,structured,adaptive",
                     "--taskset",
                     "tasks/eval",
                 ]
@@ -34,7 +34,7 @@ class CliTests(unittest.TestCase):
         data = json.loads(output.getvalue())
         self.assertEqual(exit_code, 0)
         self.assertEqual(len(data["comparisons"]), 2)
-        self.assertEqual(len(data["comparisons"][0]["results"]), 2)
+        self.assertEqual(len(data["comparisons"][0]["results"]), 3)
 
     def test_profile_accepts_provider_options(self) -> None:
         output = StringIO()

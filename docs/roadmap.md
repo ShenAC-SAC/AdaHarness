@@ -33,14 +33,12 @@ harness evolution while keeping each stage independently useful and testable.
 
 - LLM-generated harness policies.
 - Online adaptive harness changes during execution.
-- Public benchmark packs and reproducible leaderboard reports.
+- Public benchmark packs and reproducible `model x harness` leaderboard reports.
 
 ## Backlog Candidates
 
 These are future GitHub issue candidates when public task tracking becomes
 useful. Keep them in the roadmap for now.
 
-- `feat(runtime): define RunTrace schema`
-- `feat(profiler): define capability task schema`
 - `docs(research): document Minimal Effective Harness`
 - `docs(project): explain why AdaHarness is not another agent framework`
