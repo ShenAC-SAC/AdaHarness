@@ -1,15 +1,16 @@
 # Architecture
 
-AdaHarness is organized as a harness control compiler rather than a full agent
-framework. It is the control plane that decides how strongly a model should be
-planned, verified, retried, tool-gated, context-managed, and budgeted. The
-user's agent runtime remains the data plane that executes model calls, tools,
-state, streaming, and approvals.
+AdaHarness is organized as an embedded-first harness calibration and control
+compiler rather than a full agent framework. It is the control plane that
+decides how strongly an agent project should plan, verify, retry, tool-gate,
+manage context, and budget autonomy. The user's agent runtime remains the data
+plane that executes model calls, tools, state, streaming, and approvals.
 
 The product flow is:
 
 ```text
-ModelProfile + TaskProfile + Risk + Budget -> HarnessPolicy -> HarnessSpec -> RuntimeBinding
+ProjectAgentAdapter -> ProjectRunTrace -> AgentSystemProfile
+  -> HarnessPolicy -> HarnessSpec -> RuntimeBinding -> project runtime hooks
 ```
 
 The reference runtime flow is:
@@ -25,9 +26,12 @@ Agents SDK, Claude Agent SDK, or a custom agent loop.
 ## Package Boundaries
 
 - `adaharness/models/` defines model configuration, the `ModelClient` protocol,
-  structured responses, and provider adapter boundaries.
+  structured responses, and provider adapter boundaries for lab runs.
+- Future `adaharness/project/` owns project-local calibration interfaces:
+  project adapters, project run results, and calibration artifacts.
 - `adaharness/profiler/` produces a `ModelProfile` describing agent-relevant
-  capability dimensions.
+  capability dimensions. Project calibration should later lift this into an
+  `AgentSystemProfile`.
 - `adaharness/policies/` maps a profile to `HarnessPolicy`, migration reports,
   and trace-backed refinements.
 - `adaharness/specs/` compiles `HarnessPolicy` into runtime-neutral
@@ -42,12 +46,13 @@ Agents SDK, Claude Agent SDK, or a custom agent loop.
   comparative metrics from run results.
 - `adaharness/runtime/` contains state, budget, result, and tracing primitives.
 - `adaharness/adapters/` binds controller specs to existing runtime hooks.
-- `adaharness/cli.py` wires the standalone lab commands.
+- `adaharness/cli.py` wires project-local calibration and lab commands.
 
 ## Current Runtime Shape
 
-Current profiling remains deterministic. Provider clients exist, and `run` can
-call them through `ModelClient`, but live profiling is still a gap.
+Current profiling remains deterministic and model-centric. Provider clients
+exist, and `run` can call them through `ModelClient`, but project-local
+calibration is still the main gap.
 
 The provider boundary is separate:
 
@@ -72,6 +77,11 @@ EvalTask + HarnessPolicy + ModelClient -> HarnessRuntime -> RunResult + RunTrace
 
 Metrics are aggregates over `RunResult`, and reports should explain their scores
 from `RunTrace` evidence where possible.
+
+Standalone reference runs are useful for AdaHarness development, examples, and
+CI. User-facing policy value should come from a project adapter or imported
+project traces, because the effective harness depends on the host runtime,
+prompts, tools, task distribution, and failure modes.
 
 See `docs/concepts/control-surface.md` for controller semantics and
 `docs/concepts/policy-layer.md` for the control-plane boundary.

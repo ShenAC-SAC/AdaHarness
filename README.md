@@ -1,31 +1,34 @@
 # AdaHarness
 
-Model-aware harness control compiler for LLM agents.
+Embedded-first harness calibration and control compiler for LLM agent projects.
 
-AdaHarness profiles a model, generates a `HarnessPolicy`, and compiles a
-runtime-neutral control spec for how much planning, verification, retry, tool
-control, context management, and autonomy an agent runtime should use.
+AdaHarness evaluates an agent project, derives model/runtime capability signals,
+generates a `HarnessPolicy`, and compiles a runtime-neutral control spec for how
+much planning, verification, retry, tool control, context management, and
+autonomy that project should use.
 
-When models change, the optimal harness often changes too. AdaHarness helps
-detect harness drift, reduce overconstraint for stronger models, add control for
-weaker models, and export executable harness specifications.
+When models, tools, prompts, or tasks change, the optimal harness control surface
+often changes too. AdaHarness helps detect harness drift, reduce overconstraint,
+add control where needed, and export policy/spec/binding artifacts for the
+project runtime.
 
 ## Research Question
 
-Most agent systems use a fixed harness across different models. AdaHarness
-starts from a different assumption:
+Most agent systems use a fixed harness across changing models, prompts, tools,
+and task distributions. AdaHarness starts from a different assumption:
 
-> When you change the model, you may need to change the harness.
+> When the agent system changes, you may need to recalibrate harness controls.
 
 A smaller model may need explicit planning, strict tool gating, retries, and
-verification. A stronger model may perform better with fewer constraints, larger
-autonomy windows, and selective verification.
+verification in one project, while the same model may need different controls in
+another project with different tools, prompts, and failure modes.
 
 ## Core Ideas
 
-- Model capability profiling
+- Project-local calibration from tasks and traces
 - `HarnessPolicy` generation
 - `HarnessPolicy -> HarnessSpec` control compilation
+- `HarnessSpec -> RuntimeBinding` adapter reports
 - Model migration and policy/controller diff reporting
 - Harness lift, harness tax, drift, and overconstraint measurement
 - Runtime tracing for future policy refinement
@@ -34,11 +37,10 @@ autonomy windows, and selective verification.
 
 Early experimental MVP.
 
-The current version profiles a model, recommends a harness policy, compiles the
-policy into a `HarnessSpec`, runs tasks with a reference harness, compares fixed
-and adaptive harnesses, records and imports traces, refines policies from trace
-evidence, adapts active controls after retry signals, and emits policy diffs for
-model migration.
+The current version has the policy, spec, controller, binding, config, reference
+runtime, and trace-import foundation. The next focus is project-local
+calibration: running or importing traces from a user's own agent runtime and
+compiling controls back into that runtime through adapters.
 
 ## Install
 
@@ -46,29 +48,52 @@ model migration.
 uv sync --group dev
 ```
 
-## Quick Start
+## Embedded Usage
 
-```bash
-uv run adaharness profile --model example-model
-uv run adaharness recommend \
-  --profile runs/example-model-profile.json \
-  --risk medium \
-  --budget standard \
-  --out runs/example-model-policy.json
-uv run adaharness assemble \
-  --policy runs/example-model-policy.json \
-  --out runs/example-model-harness-spec.json
-uv run adaharness run \
-  --harness-spec runs/example-model-harness-spec.json \
-  --provider mock \
-  --model mock-model \
-  --task tasks/eval \
-  --out runs/example-run.json
-uv run adaharness compare --model example-model --taskset tasks/eval --out runs/example-compare.json
-uv run adaharness report runs/example-compare.json
+AdaHarness should usually be imported by an existing agent project. The project
+keeps ownership of model providers, credentials, tools, prompts, and runtime
+state.
+
+```python
+from adaharness import bind_harness_spec, compile_harness_spec, recommend_harness_policy
+from adaharness.adapters import AdapterCapabilities
+from adaharness.profiler.profile_schema import ModelProfile
+
+profile = ModelProfile(
+    model_name="my-agent-runtime",
+    planning=0.58,
+    tool_use=0.70,
+    instruction_following=0.76,
+    self_verification=0.52,
+    context_management=0.61,
+    recovery=0.45,
+)
+recommendation = recommend_harness_policy(profile, risk="medium", budget="standard")
+spec = compile_harness_spec(recommendation, name="my-agent-controls")
+binding = bind_harness_spec(
+    spec,
+    runtime="custom-python",
+    capabilities=AdapterCapabilities(
+        supports_pre_model_hook=True,
+        supports_post_model_hook=True,
+        supports_tool_interception=True,
+        supports_retry_loop=True,
+        supports_trace_export=True,
+    ),
+)
 ```
 
-Project configuration can live in `adaharness.toml`, with secrets in `.env`:
+`binding` tells the host project which controllers map to which runtime hooks,
+including levels, triggers, budgets, and escalation settings.
+
+## Project-Local CLI
+
+The CLI is not intended to be the production agent runner. It is a project-local
+calibration, regression, trace-import, and artifact-generation tool. In a real
+agent project, provider credentials should normally stay in that project.
+
+For CLI experiments or CI, project configuration can live in `adaharness.toml`,
+with secrets in `.env`:
 
 ```toml
 [providers.deepseek]
@@ -90,7 +115,9 @@ uv run adaharness config validate --config adaharness.toml
 uv run adaharness profile --config adaharness.toml --model deepseek-chat --out runs/profile.json
 ```
 
-You can also run the package without installing it:
+The current CLI also includes lab commands backed by AdaHarness' reference
+runtime. They are useful for smoke tests and examples, not as the main product
+flow:
 
 ```bash
 uv run python -m adaharness.cli profile --model example-model
@@ -142,8 +169,9 @@ Agent performance is not only a property of the base model. It is shaped by the
 surrounding harness: planning, tools, memory, retries, verification, context
 management, and runtime policy.
 
-AdaHarness treats harness control strength as something compiled from the model
-profile, task, risk, and budget, not hard-coded once.
+AdaHarness treats harness control strength as something calibrated from the
+agent project's model, runtime, task distribution, traces, risk, and budget, not
+hard-coded once.
 
 ## What AdaHarness Is Not
 

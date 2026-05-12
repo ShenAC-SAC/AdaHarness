@@ -1,12 +1,13 @@
 # Users and Use Cases
 
-AdaHarness is a model-aware harness control compiler for LLM agents. It
-profiles a model, generates a `HarnessPolicy`, and compiles the minimal
-effective control surface for that model, task type, budget, and risk level.
+AdaHarness is an embedded-first harness calibration and control compiler for LLM
+agent projects. It evaluates a project's tasks and traces, generates a
+`HarnessPolicy`, and compiles the minimal effective control surface for that
+project's model, runtime, budget, and risk level.
 
 The core question is not only "which model scores higher?" It is "how should
-this model be constrained, released, verified, given tools, and recovered from
-failure?"
+this agent project plan, verify, retry, control tools, manage context, and
+recover from failure?"
 
 ## Target Users
 
@@ -21,16 +22,15 @@ migration recommendations.
 ### AI Platform Teams
 
 Platform teams support many models across shared runtimes. AdaHarness can serve
-as a model onboarding and harness calibration tool: profile a new model, generate
-its default policy, compile a runtime spec, and validate it against regression
-tasks.
+as a project-local model onboarding and harness calibration tool: run project
+tasks, import traces, generate a default policy, compile a runtime spec, and
+validate binding against the host runtime.
 
 ### AI Application Developers
 
-Application teams need cost and reliability tradeoffs. AdaHarness helps compare
-small model plus stronger harness against frontier model plus lighter harness,
-and identifies which controls can be removed when a stronger model does not need
-them.
+Application teams need cost and reliability tradeoffs inside their own product
+flows. AdaHarness helps compare whether their project needs stronger control for
+a cheaper model or lighter control for a stronger model.
 
 ### Model and Open Model Teams
 
@@ -40,11 +40,12 @@ inform both training priorities and recommended runtime controls.
 
 ## Core Use Cases
 
-### Model Migration Harness Update
+### Project-Local Model Migration
 
-When moving from model A to model B, the harness may need to change. AdaHarness
-should compare old and new profiles, old and recommended policies, controller
-diffs, risk changes, cost changes, and the recommended migration plan.
+When moving from model A to model B inside an agent project, the harness may
+need to change. AdaHarness should compare old and new project traces, old and
+recommended policies, controller diffs, risk changes, cost changes, and the
+recommended migration plan.
 
 Example recommendation:
 
@@ -69,7 +70,7 @@ models. AdaHarness should identify redundant controls, such as mandatory
 planning, aggressive retries, always-on verification, or unnecessary subagent
 fanout.
 
-### Task-Specific Harness Assembly
+### Task-Specific Control Calibration
 
 Different task classes need different controls. Low-risk summarization may use a
 light control surface. Tool-heavy workflows may need gatekeeping, recovery, and
@@ -82,19 +83,21 @@ Model upgrades should regression-test the harness, not only the model. AdaHarnes
 should detect when the old policy has drifted, adds cost without lift, or misses
 new failure modes under the replacement model.
 
-### Runtime-Agnostic Harness Policy
+### Runtime-Agnostic Control Binding
 
-AdaHarness should export neutral `HarnessSpec` artifacts that can be mapped into
-different runtimes. The project should avoid binding core controller semantics
-to one agent framework.
+AdaHarness should export neutral `HarnessSpec` and `RuntimeBinding` artifacts
+that can be mapped into different runtimes. The project should avoid binding
+core controller semantics to one agent framework.
 
 ## Output Artifacts
 
 | Artifact | Purpose |
 | --- | --- |
-| `ModelProfile` | Diagnoses planning, tool use, recovery, verification, context handling, and cost sensitivity. |
+| `AgentSystemProfile` | Diagnoses model/runtime behavior from project tasks, capabilities, traces, and failure modes. |
+| `ModelProfile` | Compatibility profile for current model-level scoring. |
 | `HarnessPolicy` | States how much control, verification, retry, context management, and autonomy to apply. |
 | `HarnessSpec` | Converts policy into controller levels, triggers, budgets, and runtime-facing configuration. |
+| `RuntimeBinding` | Maps controller specs to hooks or middleware in the host runtime. |
 | Policy and controller diff | Shows how the harness should change when model, task, risk, or budget changes. |
 | Decision report | Explains the recommendation, tradeoffs, expected impact, and next actions. |
 
@@ -112,13 +115,11 @@ to one agent framework.
 
 ## User Journeys
 
-New model onboarding:
+Project-local calibration:
 
 ```bash
-adaharness profile --model new-model --taskset tasks/profiler --out runs/new-profile.json
-adaharness recommend --profile runs/new-profile.json --risk medium --budget standard --out runs/new-policy.json
-adaharness assemble --policy runs/new-policy.json --out runs/new-harness-spec.json
-adaharness report --profile runs/new-profile.json --policy runs/new-policy.json --spec runs/new-harness-spec.json
+adaharness calibrate --config adaharness.toml
+adaharness validate --config adaharness.toml --binding .adaharness/binding.json
 ```
 
 Model migration:
@@ -132,6 +133,6 @@ adaharness migrate \
   --out runs/migration-report.md
 ```
 
-`recommend`, `assemble`, `migrate`, and `refine` are the commands that express
-the product value most directly. `compare` remains the validation command behind
-those decisions.
+`calibrate`, `bind`, `validate`, `migrate`, and `refine` are the commands that
+express the product value most directly. `compare` remains a lab validation
+command behind those decisions.

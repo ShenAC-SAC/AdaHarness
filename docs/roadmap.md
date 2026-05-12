@@ -3,20 +3,22 @@
 AdaHarness is now centered on:
 
 ```text
-ModelProfile + TaskProfile + Risk + Budget
+ProjectAgentAdapter -> ProjectRunTrace -> AgentSystemProfile
   -> HarnessControlPolicy
   -> HarnessControlSpec
   -> RuntimeBinding
+  -> ProjectRuntimeHooks
 ```
 
-The standalone CLI remains the lab environment:
+The CLI should be project-local first:
 
 ```text
-profile -> recommend -> assemble -> run -> trace -> refine
+calibrate -> recommend -> compile -> bind -> validate -> report
 ```
 
-`ModularHarness` remains a reference runtime for validation, not the product
-boundary.
+Standalone reference commands remain a lab environment for AdaHarness
+development and smoke tests. `ModularHarness` remains a reference runtime for
+validation, not the product boundary.
 
 ## Completed Foundation
 
@@ -29,54 +31,56 @@ boundary.
 - Generic external trace normalization.
 - Public API, project config, adapter capabilities, and runtime binding reports.
 
-## Phase 1 Harness Control Surface
+## Phase 1 Project-Embedded Positioning
 
-Goal: make the controller model explicit so AdaHarness is not just a module
-on/off assembler.
+Goal: make the product story project-local rather than standalone benchmark
+first.
 
-- Define planning, verification, retry, tool, context, budget, delegation, and
-  autonomy controllers.
-- Document levels, triggers, authority, budgets, and escalation.
-- Keep modules as reference-runtime implementation details.
+- Update README and docs so the main path starts inside an existing agent
+  project.
+- Move reference runtime and mock task flows to lab/development status.
+- Explain that the host project owns model configuration, prompts, tools, and
+  runtime state.
 
-Acceptance: docs and specs describe controller levels rather than only runtime
-module membership.
+Acceptance: new users see AdaHarness as project calibration and control binding,
+not a standalone model benchmark.
 
-## Phase 2 Controller Specs
+## Phase 2 Project Agent Adapter
 
-Goal: upgrade `HarnessSpec` to expose controller specs while keeping module
-compatibility.
+Goal: define how AdaHarness evaluates a host agent project.
 
-- Add `ControllerSpec` and `controllers` to `HarnessSpec`.
-- Derive module specs from controller specs for the reference runtime.
-- Preserve current JSON fields for backward compatibility.
+- Add `ProjectAgentAdapter`, `ProjectRunResult`, and `CalibrationResult`.
+- Let adapters report runtime capabilities, run project tasks, and export
+  traces.
+- Keep the first adapter contract simple and synchronous.
 
-Acceptance: `assemble` emits controller specs and existing module-based tests
-still pass.
+Acceptance: a small custom adapter can run a task and produce traces without
+reconfiguring model credentials in AdaHarness.
 
-## Phase 3 Controller Binding
+## Phase 3 Agent System Profile
 
-Goal: make adapter output explain controller-to-hook mappings.
+Goal: derive policy from project evidence, not only standalone model scores.
 
-- Bind `planner`, `verifier`, `retry`, `tool_control`, `context`, `budget`,
-  `delegation`, and `autonomy` to required hooks.
-- Report unsupported controllers and unsupported legacy modules separately.
-- Keep the first adapter as a report-only contract.
+- Add `AgentSystemProfile` as a composed profile over model signals, runtime
+  capabilities, task profile, trace evidence, and failure modes.
+- Add trace-backed conversion from project runs to profile signals.
+- Keep `ModelProfile` as the current compatibility input.
 
-Acceptance: `bind(spec)` produces `bindings` keyed by controller, including
-hook, level, mode, triggers, and config.
+Acceptance: `calibrate_project(...)` can recommend a policy from project task
+results and runtime capabilities.
 
-## Phase 4 Live Profiling
+## Phase 4 Project-Local CLI
 
-Goal: make model profiles come from real model runs when explicitly requested.
+Goal: make CLI useful after AdaHarness is installed in a host project.
 
-- Keep default profiling synthetic.
-- Add `profile --live` that builds a `ModelClient`.
-- Score profiler task traces deterministically.
-- Never call a real provider without `--live`.
+- Add `calibrate`, `validate`, and `bind` commands around project config.
+- Treat existing `profile`, `compare`, and reference `run` flows as lab commands
+  or compatibility commands.
+- Avoid duplicating provider credentials when an adapter owns model access.
 
-Acceptance: `profile --live --provider mock` exercises the live path in CI, and
-real providers require explicit configuration.
+Acceptance: users can run `adaharness calibrate --config adaharness.toml` inside
+their agent repo and receive profile, policy, spec, binding, trace, and report
+artifacts.
 
 ## Phase 5 Reference Runtime Behavior
 

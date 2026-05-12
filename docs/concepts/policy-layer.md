@@ -2,15 +2,16 @@
 
 AdaHarness is a control plane for agent harnesses, not a replacement runtime.
 
-It decides how much control a model should receive, compiles that control
-surface into a runtime-neutral spec, and later binds that spec to an existing
-agent runtime. The actual agent loop, state management, streaming, tool
-execution, persistence, and human approval flow stay in the user's runtime.
+It decides how much control an agent project should receive, compiles that
+control surface into a runtime-neutral spec, and later binds that spec to an
+existing agent runtime. The actual agent loop, state management, streaming, tool
+execution, persistence, provider configuration, and human approval flow stay in
+the user's runtime.
 
 ## Product Boundary
 
 ```text
-ModelProfile -> HarnessPolicy -> HarnessSpec -> RuntimeBinding -> external runtime
+ProjectRunTrace -> AgentSystemProfile -> HarnessPolicy -> HarnessSpec -> RuntimeBinding
 ```
 
 `ModularHarness` is the reference runtime used for local validation. It proves
@@ -21,7 +22,7 @@ to rewrite their agent projects around AdaHarness modules.
 
 | Layer | Role |
 | --- | --- |
-| Core | Profile models, recommend policy, compile specs, diff policies, refine from traces. |
+| Core | Calibrate from project evidence, recommend policy, compile specs, diff policies, refine from traces. |
 | Reference runtime | Validate that policies can change module behavior in AdaHarness-owned tests. |
 | Adapters | Map `HarnessSpec` controls to an existing runtime's hooks, middleware, or config. |
 
@@ -80,5 +81,5 @@ automatic application can be added after the binding contract is stable.
   agent runtime replacement.
 - Users should not need to reimplement their production harness using
   AdaHarness internal modules.
-- Provider credentials and runtime wiring should come from project config, not
-  repeated command-line flags.
+- Provider credentials and runtime wiring should stay in the host agent project
+  when AdaHarness is used as an embedded policy layer.
