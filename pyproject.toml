@@ -5,14 +5,14 @@ build-backend = "hatchling.build"
 [project]
 name = "adaharness"
 version = "0.1.0"
-description = "Adaptive harness selection and evaluation for LLM agents."
+description = "Model-aware harness compiler for LLM agents."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [
   { name = "AdaHarness contributors" }
 ]
-keywords = ["llm", "agents", "harness", "evaluation", "benchmark"]
+keywords = ["llm", "agents", "harness", "policy", "compiler", "evaluation"]
 dependencies = []
 
 [project.optional-dependencies]

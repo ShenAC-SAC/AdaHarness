@@ -16,11 +16,14 @@ from adaharness.harnesses import (
 )
 from adaharness.harnesses.base import Harness
 from adaharness.models import SUPPORTED_PROVIDERS, ModelConfig, build_model_config
+from adaharness.policies.artifacts import PolicyRecommendation
 from adaharness.policies.generator import recommend_policy
 from adaharness.policies.schema import BUDGET_LEVELS, RISK_LEVELS
+from adaharness.policies.schema import HarnessPolicy
 from adaharness.profiler.profile_schema import ModelProfile
 from adaharness.profiler.runner import run_profiler
 from adaharness.runtime.results import RunResult
+from adaharness.specs import compile_policy_to_spec
 
 
 def _write_json(path: Path, data: dict[str, Any]) -> None:
@@ -30,6 +33,23 @@ def _write_json(path: Path, data: dict[str, Any]) -> None:
 
 def _load_profile(path: Path) -> ModelProfile:
     return ModelProfile.from_dict(json.loads(path.read_text(encoding="utf-8")))
+
+
+def _load_policy(path: Path) -> tuple[HarnessPolicy, dict[str, Any]]:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if "policy" in data:
+        recommendation = PolicyRecommendation.from_dict(data)
+        return recommendation.policy, {
+            "source_artifact": str(path),
+            "recommendation": {
+                "model_name": recommendation.model_name,
+                "risk": recommendation.risk,
+                "budget": recommendation.budget,
+                "source": recommendation.source,
+                "schema_version": recommendation.schema_version,
+            },
+        }
+    return HarnessPolicy.from_dict(data), {"source_artifact": str(path)}
 
 
 def _model_config_from_args(args: argparse.Namespace) -> ModelConfig:
@@ -96,6 +116,16 @@ def cmd_recommend(args: argparse.Namespace) -> int:
     profile = _load_profile(Path(args.profile))
     recommendation = recommend_policy(profile, risk=args.risk, budget=args.budget)
     data = recommendation.to_dict()
+    if args.out:
+        _write_json(Path(args.out), data)
+    print(json.dumps(data, indent=2))
+    return 0
+
+
+def cmd_assemble(args: argparse.Namespace) -> int:
+    policy, metadata = _load_policy(Path(args.policy))
+    spec = compile_policy_to_spec(policy, name=args.name, metadata=metadata)
+    data = spec.to_dict()
     if args.out:
         _write_json(Path(args.out), data)
     print(json.dumps(data, indent=2))
@@ -216,6 +246,12 @@ def build_parser() -> argparse.ArgumentParser:
     recommend.add_argument("--budget", choices=BUDGET_LEVELS, default="standard")
     recommend.add_argument("--out")
     recommend.set_defaults(func=cmd_recommend)
+
+    assemble = subparsers.add_parser("assemble", help="Compile a policy into a harness spec")
+    assemble.add_argument("--policy", required=True)
+    assemble.add_argument("--name", default="compiled_harness")
+    assemble.add_argument("--out")
+    assemble.set_defaults(func=cmd_assemble)
 
     compare = subparsers.add_parser("compare", help="Compare harness presets")
     compare.add_argument("--model")

@@ -99,3 +99,45 @@ class CliTests(unittest.TestCase):
             self.assertEqual(file_data["risk"], "high")
             self.assertEqual(file_data["budget"], "constrained")
             self.assertEqual(file_data["policy"]["verifier_strength"], "selective")
+
+    def test_assemble_compiles_policy_artifact(self) -> None:
+        profile = ModelProfile(
+            model_name="assemble-model",
+            planning=0.65,
+            tool_use=0.65,
+            instruction_following=0.65,
+            self_verification=0.65,
+            context_management=0.65,
+            recovery=0.65,
+        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            profile_path = Path(tmpdir) / "profile.json"
+            policy_path = Path(tmpdir) / "policy.json"
+            spec_path = Path(tmpdir) / "harness-spec.json"
+            profile_path.write_text(json.dumps(profile.to_dict()), encoding="utf-8")
+
+            with redirect_stdout(StringIO()):
+                main(["recommend", "--profile", str(profile_path), "--out", str(policy_path)])
+
+            output = StringIO()
+            with redirect_stdout(output):
+                exit_code = main(
+                    [
+                        "assemble",
+                        "--policy",
+                        str(policy_path),
+                        "--name",
+                        "test_spec",
+                        "--out",
+                        str(spec_path),
+                    ]
+                )
+
+            stdout_data = json.loads(output.getvalue())
+            file_data = json.loads(spec_path.read_text(encoding="utf-8"))
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(stdout_data, file_data)
+            self.assertEqual(file_data["schema_version"], "0.3")
+            self.assertEqual(file_data["name"], "test_spec")
+            self.assertIn("planner", file_data["enabled_modules"])
+            self.assertEqual(file_data["metadata"]["recommendation"]["model_name"], "assemble-model")
