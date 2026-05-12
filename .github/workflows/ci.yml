@@ -31,10 +31,23 @@ jobs:
       - name: Run tests
         run: uv run pytest -q
 
+      - name: Compile Python files
+        run: uv run python -m compileall adaharness tests
+
       - name: Run lint
         run: uv run ruff check .
 
       - name: Smoke test CLI
         run: |
+          mkdir -p runs
+          uv run adaharness profile --model small-sim --taskset tasks/profiler --out runs/small-profile.json
+          uv run adaharness profile --model strong-sim --taskset tasks/profiler --out runs/strong-profile.json
+          uv run adaharness recommend --profile runs/small-profile.json --out runs/small-policy.json
+          uv run adaharness assemble --policy runs/small-policy.json --out runs/small-spec.json
+          uv run adaharness run --harness-spec runs/small-spec.json --provider mock --model mock-model --task tasks/eval --out runs/ci-run.json
+          uv run adaharness migrate --from-profile runs/small-profile.json --to-profile runs/strong-profile.json --from-policy runs/small-policy.json --out runs/migration.json
+          uv run adaharness refine --policy runs/small-policy.json --trace runs/ci-run-traces --out runs/refinement.json
+          TRACE=$(find runs/ci-run-traces -name '*.json' | head -n 1)
+          uv run adaharness import-trace --source "$TRACE" --out runs/imported-trace.json
           uv run adaharness compare --model small-sim --taskset tasks/eval --out runs/ci-compare.json
           uv run adaharness report runs/ci-compare.json
