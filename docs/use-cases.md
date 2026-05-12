@@ -1,8 +1,8 @@
 # Users and Use Cases
 
-AdaHarness is a model-aware harness compiler for LLM agents. It profiles a
-model, generates a `HarnessPolicy`, and assembles the minimal effective modular
-harness for that model, task type, budget, and risk level.
+AdaHarness is a model-aware harness control compiler for LLM agents. It
+profiles a model, generates a `HarnessPolicy`, and compiles the minimal
+effective control surface for that model, task type, budget, and risk level.
 
 The core question is not only "which model scores higher?" It is "how should
 this model be constrained, released, verified, given tools, and recovered from
@@ -13,10 +13,10 @@ failure?"
 ### Agent Infrastructure Engineers
 
 Infra engineers own agent reliability, model migration, tool integration, and
-cost control. AdaHarness should help them answer whether a model needs strict
-planning, always-on verification, bounded retries, stricter tool gatekeeping, or
-larger autonomy windows. The main outputs are `HarnessPolicy`, `HarnessSpec`,
-policy diffs, module diffs, and migration recommendations.
+cost control. AdaHarness should help them answer how strong planning,
+verification, retry, tool control, and autonomy should be. The main outputs are
+`HarnessPolicy`, `HarnessSpec`, policy/controller diffs, binding reports, and
+migration recommendations.
 
 ### AI Platform Teams
 
@@ -43,8 +43,8 @@ inform both training priorities and recommended runtime controls.
 ### Model Migration Harness Update
 
 When moving from model A to model B, the harness may need to change. AdaHarness
-should compare old and new profiles, old and recommended policies, policy diffs,
-module diffs, risk changes, cost changes, and the recommended migration plan.
+should compare old and new profiles, old and recommended policies, controller
+diffs, risk changes, cost changes, and the recommended migration plan.
 
 Example recommendation:
 
@@ -58,9 +58,9 @@ Keep moderate tool gatekeeping.
 ### Small Model Enablement
 
 Small, local, or cheaper models may need stronger harness support. AdaHarness
-should identify the minimum controls needed to make the model usable, such as a
-strict planner, context summarizer, tool gatekeeper, verifier, and bounded retry
-controller.
+should identify the minimum control levels needed to make the model usable, such
+as strict planning, summarized context, strict tool control, selective or
+always-on verification, and bounded retry.
 
 ### Strong Model Deconstraint
 
@@ -72,9 +72,9 @@ fanout.
 ### Task-Specific Harness Assembly
 
 Different task classes need different controls. Low-risk summarization may use a
-light harness. Tool-heavy workflows may need gatekeeping, recovery, and
+light control surface. Tool-heavy workflows may need gatekeeping, recovery, and
 verification. High-risk external actions may require strict verification, audit
-traces, and later human approval modules.
+traces, and later human approval.
 
 ### Harness Regression Test
 
@@ -85,8 +85,8 @@ new failure modes under the replacement model.
 ### Runtime-Agnostic Harness Policy
 
 AdaHarness should export neutral `HarnessSpec` artifacts that can be mapped into
-different runtimes. The project should avoid binding core policy semantics to one
-agent framework.
+different runtimes. The project should avoid binding core controller semantics
+to one agent framework.
 
 ## Output Artifacts
 
@@ -94,8 +94,8 @@ agent framework.
 | --- | --- |
 | `ModelProfile` | Diagnoses planning, tool use, recovery, verification, context handling, and cost sensitivity. |
 | `HarnessPolicy` | States how much control, verification, retry, context management, and autonomy to apply. |
-| `HarnessSpec` | Converts policy into enabled modules and runtime-facing module configuration. |
-| Policy and module diff | Shows how the harness should change when model, task, risk, or budget changes. |
+| `HarnessSpec` | Converts policy into controller levels, triggers, budgets, and runtime-facing configuration. |
+| Policy and controller diff | Shows how the harness should change when model, task, risk, or budget changes. |
 | Decision report | Explains the recommendation, tradeoffs, expected impact, and next actions. |
 
 ## Migration Metrics
@@ -105,8 +105,8 @@ agent framework.
   success gain.
 - `underconstraint_risk`: failure risk from running a weak model with too little
   control.
-- `policy_delta`: changed policy fields, enabled or disabled modules, and
-  strength changes.
+- `policy_delta`: changed policy fields, controller levels, triggers, budgets,
+  and strength changes.
 - `minimal_effective_harness_score`: the lightest harness that satisfies success
   and risk requirements.
 

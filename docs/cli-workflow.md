@@ -60,8 +60,9 @@ adaharness migrate \
   --out runs/model-a-to-model-b-migration.md
 ```
 
-The migration report should include policy diffs, module diffs, harness drift,
-overconstraint penalty, underconstraint risk, and recommended next actions.
+The migration report should include policy diffs, controller diffs, harness
+drift, overconstraint penalty, underconstraint risk, and recommended next
+actions.
 
 ## Configuration
 

@@ -2,10 +2,10 @@
 
 AdaHarness is a control plane for agent harnesses, not a replacement runtime.
 
-It decides what controls a model should receive, compiles those controls into a
-runtime-neutral spec, and later binds that spec to an existing agent runtime.
-The actual agent loop, state management, streaming, tool execution, persistence,
-and human approval flow stay in the user's runtime.
+It decides how much control a model should receive, compiles that control
+surface into a runtime-neutral spec, and later binds that spec to an existing
+agent runtime. The actual agent loop, state management, streaming, tool
+execution, persistence, and human approval flow stay in the user's runtime.
 
 ## Product Boundary
 
@@ -14,8 +14,8 @@ ModelProfile -> HarnessPolicy -> HarnessSpec -> RuntimeBinding -> external runti
 ```
 
 `ModularHarness` is the reference runtime used for local validation. It proves
-that a policy can enable, disable, and tune controls, but production users should
-not have to rewrite their agent projects around AdaHarness modules.
+that a policy can tune controller behavior, but production users should not have
+to rewrite their agent projects around AdaHarness modules.
 
 ## Layers
 
@@ -29,7 +29,8 @@ not have to rewrite their agent projects around AdaHarness modules.
 
 `HarnessPolicy` is the high-level strategy: planning depth, tool gatekeeping,
 verifier strength, retry policy, autonomy budget, subagent policy, and context
-policy.
+policy. It should be interpreted as control strength, not as a simple list of
+modules to enable.
 
 It does not control an external agent by itself. It must be compiled and bound:
 
@@ -39,10 +40,10 @@ HarnessPolicy -> compile_policy_to_spec() -> HarnessSpec -> RuntimeAdapter
 
 ## What Spec Controls
 
-`HarnessSpec` is the runtime-neutral control contract. It names the controls to
-enable, their configuration, and the runtime capabilities required to support
-them. In the reference runtime those controls map to AdaHarness modules. In an
-external runtime they must map through an adapter.
+`HarnessSpec` is the runtime-neutral control contract. It names controller
+levels, triggers, budgets, and escalation rules, plus the runtime capabilities
+required to support them. In the reference runtime those controls map to
+AdaHarness modules. In an external runtime they must map through an adapter.
 
 A spec should expose `source_policy`, `requirements`, and `adapter_hints` at the
 top level so adapters can reject unsupported control plans before execution.
@@ -50,7 +51,8 @@ top level so adapters can reject unsupported control plans before execution.
 ## What Adapters Control
 
 A `RuntimeAdapter` inspects a runtime's capabilities and produces a
-`RuntimeBinding` that explains how each control maps to concrete hooks such as:
+`RuntimeBinding` that explains how each controller maps to concrete hooks such
+as:
 
 - `before_model_call`
 - `after_model_call`

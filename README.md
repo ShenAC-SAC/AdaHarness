@@ -1,10 +1,10 @@
 # AdaHarness
 
-Model-aware harness compiler for LLM agents.
+Model-aware harness control compiler for LLM agents.
 
-AdaHarness profiles a model, generates a `HarnessPolicy`, and is being built to
-assemble a modular harness that matches the model's capabilities, task type,
-budget, and risk level.
+AdaHarness profiles a model, generates a `HarnessPolicy`, and compiles a
+runtime-neutral control spec for how much planning, verification, retry, tool
+control, context management, and autonomy an agent runtime should use.
 
 When models change, the optimal harness often changes too. AdaHarness helps
 detect harness drift, reduce overconstraint for stronger models, add control for
@@ -25,8 +25,8 @@ autonomy windows, and selective verification.
 
 - Model capability profiling
 - `HarnessPolicy` generation
-- `HarnessPolicy -> HarnessSpec` compilation
-- Model migration and policy/module diff reporting
+- `HarnessPolicy -> HarnessSpec` control compilation
+- Model migration and policy/controller diff reporting
 - Harness lift, harness tax, drift, and overconstraint measurement
 - Runtime tracing for future policy refinement
 
@@ -35,10 +35,10 @@ autonomy windows, and selective verification.
 Early experimental MVP.
 
 The current version profiles a model, recommends a harness policy, compiles the
-policy into a `HarnessSpec`, runs tasks with assembled modules, compares fixed
+policy into a `HarnessSpec`, runs tasks with a reference harness, compares fixed
 and adaptive harnesses, records and imports traces, refines policies from trace
-evidence, adapts active modules after retry signals, and emits policy/module
-diffs for model migration.
+evidence, adapts active controls after retry signals, and emits policy diffs for
+model migration.
 
 ## Install
 
@@ -132,7 +132,8 @@ Anthropic are useful strong-model baselines, but AdaHarness is especially aimed
 at comparing harness choices for open, local, and OpenAI-compatible models where
 the right orchestration layer may have a larger effect.
 
-See `docs/concepts/policy-layer.md` for the control-plane boundary and
+See `docs/concepts/control-surface.md` for the controller model,
+`docs/concepts/policy-layer.md` for the control-plane boundary, and
 `docs/use-cases.md` for target users, migration workflows, and artifacts.
 
 ## Why
@@ -141,13 +142,13 @@ Agent performance is not only a property of the base model. It is shaped by the
 surrounding harness: planning, tools, memory, retries, verification, context
 management, and runtime policy.
 
-AdaHarness treats the harness as something compiled from the model profile, not
-hard-coded once.
+AdaHarness treats harness control strength as something compiled from the model
+profile, task, risk, and budget, not hard-coded once.
 
 ## What AdaHarness Is Not
 
 AdaHarness is not a replacement for LangChain, LangGraph, OpenAI Agents SDK, or
-other agent runtimes. It is a runtime-agnostic harness policy and assembly layer
+other agent runtimes. It is a runtime-agnostic harness policy and control layer
 that can sit above different runtimes.
 
 ## MVP Scope

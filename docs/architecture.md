@@ -1,14 +1,15 @@
 # Architecture
 
-AdaHarness is organized as a harness policy/compiler layer rather than a full
-agent framework. It is the control plane that decides which harness controls a
-model should receive. The user's agent runtime remains the data plane that
-executes model calls, tools, state, streaming, and approvals.
+AdaHarness is organized as a harness control compiler rather than a full agent
+framework. It is the control plane that decides how strongly a model should be
+planned, verified, retried, tool-gated, context-managed, and budgeted. The
+user's agent runtime remains the data plane that executes model calls, tools,
+state, streaming, and approvals.
 
 The product flow is:
 
 ```text
-ModelProfile -> HarnessPolicy -> HarnessSpec -> RuntimeBinding -> external runtime
+ModelProfile + TaskProfile + Risk + Budget -> HarnessPolicy -> HarnessSpec -> RuntimeBinding
 ```
 
 The reference runtime flow is:
@@ -21,7 +22,7 @@ ModelProfile -> HarnessPolicy -> HarnessSpec -> ModularHarness -> RunTrace
 the expected production runtime for users who already have LangGraph, OpenAI
 Agents SDK, Claude Agent SDK, or a custom agent loop.
 
-## Module Boundaries
+## Package Boundaries
 
 - `adaharness/models/` defines model configuration, the `ModelClient` protocol,
   structured responses, and provider adapter boundaries.
@@ -30,9 +31,9 @@ Agents SDK, Claude Agent SDK, or a custom agent loop.
 - `adaharness/policies/` maps a profile to `HarnessPolicy`, migration reports,
   and trace-backed refinements.
 - `adaharness/specs/` compiles `HarnessPolicy` into runtime-neutral
-  `HarnessSpec` controls.
+  `HarnessSpec` controller plans.
 - `adaharness/modules/` implements reference planner, verifier, retry, budget,
-  context, tool, and trace controls.
+  context, tool, and trace behavior for local validation.
 - `adaharness/harnesses/` contains preset harnesses and the reference
   `ModularHarness`.
 - `adaharness/integrations/` normalizes external traces without executing
@@ -40,7 +41,7 @@ Agents SDK, Claude Agent SDK, or a custom agent loop.
 - `adaharness/evals/` loads task fixtures, estimates task success, and computes
   comparative metrics from run results.
 - `adaharness/runtime/` contains state, budget, result, and tracing primitives.
-- Future `adaharness/adapters/` will bind specs to existing runtimes.
+- `adaharness/adapters/` binds controller specs to existing runtime hooks.
 - `adaharness/cli.py` wires the standalone lab commands.
 
 ## Current Runtime Shape
@@ -72,4 +73,5 @@ EvalTask + HarnessPolicy + ModelClient -> HarnessRuntime -> RunResult + RunTrace
 Metrics are aggregates over `RunResult`, and reports should explain their scores
 from `RunTrace` evidence where possible.
 
-See `docs/concepts/policy-layer.md` for the control-plane boundary.
+See `docs/concepts/control-surface.md` for controller semantics and
+`docs/concepts/policy-layer.md` for the control-plane boundary.

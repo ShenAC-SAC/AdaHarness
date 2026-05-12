@@ -3,7 +3,10 @@
 AdaHarness is now centered on:
 
 ```text
-ModelProfile -> HarnessPolicy -> HarnessSpec -> RuntimeBinding -> external runtime
+ModelProfile + TaskProfile + Risk + Budget
+  -> HarnessControlPolicy
+  -> HarnessControlSpec
+  -> RuntimeBinding
 ```
 
 The standalone CLI remains the lab environment:
@@ -21,59 +24,49 @@ boundary.
 - `HarnessPolicy -> HarnessSpec` compilation.
 - Reference `ModuleRegistry`, `HarnessBuilder`, and `ModularHarness`.
 - Policy-driven reference runtime hooks and online retry adaptation.
-- Migration reports with policy diff, module diff, and drift metrics.
+- Migration reports with policy diffs, controller diffs, and drift metrics.
 - Trace-backed offline refinement.
 - Generic external trace normalization.
+- Public API, project config, adapter capabilities, and runtime binding reports.
 
-## Phase 1 Public Core API
+## Phase 1 Harness Control Surface
 
-Goal: let external projects import AdaHarness without shelling out to the CLI.
+Goal: make the controller model explicit so AdaHarness is not just a module
+on/off assembler.
 
-- Add stable functions for loading profiles, recommending policies, compiling
-  specs, loading/saving artifacts, and building the reference harness.
-- Keep CLI as a wrapper over the same API.
-- Document embedded-library usage.
+- Define planning, verification, retry, tool, context, budget, delegation, and
+  autonomy controllers.
+- Document levels, triggers, authority, budgets, and escalation.
+- Keep modules as reference-runtime implementation details.
 
-Acceptance: an external Python file can import AdaHarness and produce
-`HarnessPolicy` and `HarnessSpec` without invoking `adaharness`.
+Acceptance: docs and specs describe controller levels rather than only runtime
+module membership.
 
-## Phase 2 Runtime Adapter Contract
+## Phase 2 Controller Specs
 
-Goal: make external runtime integration explicit.
+Goal: upgrade `HarnessSpec` to expose controller specs while keeping module
+compatibility.
 
-- Add `RuntimeAdapter`, `AdapterCapabilities`, and `RuntimeBinding`.
-- Add a generic binding adapter that maps `HarnessSpec` controls to required
-  hooks and reports unsupported controls.
-- Do not mutate LangGraph/OpenAI Agents SDK objects yet.
+- Add `ControllerSpec` and `controllers` to `HarnessSpec`.
+- Derive module specs from controller specs for the reference runtime.
+- Preserve current JSON fields for backward compatibility.
 
-Acceptance: `bind(spec)` produces a machine-readable binding report explaining
-which hooks a target runtime must expose.
+Acceptance: `assemble` emits controller specs and existing module-based tests
+still pass.
 
-## Phase 3 HarnessSpec Contract Upgrade
+## Phase 3 Controller Binding
 
-Goal: make `HarnessSpec` a cross-runtime control contract, not only an internal
-module list.
+Goal: make adapter output explain controller-to-hook mappings.
 
-- Add `requirements`, `adapter_hints`, and top-level `source_policy`.
-- Add helpers such as `get_module()` and requirement checks.
-- Preserve backward-compatible loading for existing specs.
+- Bind `planner`, `verifier`, `retry`, `tool_control`, `context`, `budget`,
+  `delegation`, and `autonomy` to required hooks.
+- Report unsupported controllers and unsupported legacy modules separately.
+- Keep the first adapter as a report-only contract.
 
-Acceptance: adapters can inspect a spec and decide whether a runtime supports
-it before execution.
+Acceptance: `bind(spec)` produces `bindings` keyed by controller, including
+hook, level, mode, triggers, and config.
 
-## Phase 4 Project Configuration
-
-Goal: remove repeated provider and credential wiring from CLI arguments.
-
-- Add `.env` loading for secrets.
-- Add `adaharness.toml` for providers, models, defaults, tasksets, and runtime
-  preferences.
-- Add `config inspect` and `config validate`.
-
-Acceptance: `adaharness profile --config adaharness.toml --model qwen-local`
-resolves provider, base URL, taskset, risk, and budget.
-
-## Phase 5 Live Profiling
+## Phase 4 Live Profiling
 
 Goal: make model profiles come from real model runs when explicitly requested.
 
@@ -85,14 +78,13 @@ Goal: make model profiles come from real model runs when explicitly requested.
 Acceptance: `profile --live --provider mock` exercises the live path in CI, and
 real providers require explicit configuration.
 
-## Phase 6 Reference Runtime Behavior
+## Phase 5 Reference Runtime Behavior
 
 Goal: make the reference runtime useful as a validation lab.
 
-- Make planner alter messages.
-- Add deterministic fake tools.
-- Make verifier use task checks and traces.
-- Enforce budget limits.
-- Make retry and recovery change the next attempt.
+- Implement graded planner behavior first: `hint`, `light`, `conditional`,
+  `explicit`, and `strict`.
+- Then implement verifier and retry levels.
+- Add deterministic fake tools and task-backed verification.
 
 Acceptance: reference traces show behavioral differences beyond trace markers.
