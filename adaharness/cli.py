@@ -10,9 +10,11 @@ from typing import Any
 from adaharness.analysis import (
     compute_trace_metrics,
     diagnose_harness,
+    load_diagnostic_config,
     load_trace_events,
     recommend_policy_changes,
     render_analysis_report,
+    validate_trace_events,
 )
 from adaharness.config import AdaHarnessConfig, load_config
 from adaharness.evals.runner import compare_harness_runs
@@ -217,33 +219,53 @@ def _write_calibration_artifacts(out_dir: Path, data: dict[str, Any]) -> dict[st
 def _write_analysis_sidecars(
     report_path: Path,
     *,
+    diagnostics_config: dict[str, Any],
     metrics: dict[str, Any],
     diagnosis: list[dict[str, Any]],
+    trace_warnings: list[dict[str, Any]],
     policy_diff: list[dict[str, Any]],
 ) -> None:
     _write_json(
         report_path.with_suffix(".analysis.json"),
         {
+            "diagnostics_config": diagnostics_config,
             "metrics": metrics,
+            "trace_warnings": trace_warnings,
             "diagnosis": {"signals": diagnosis},
             "policy_diff": {"changes": policy_diff},
         },
     )
     _write_json(report_path.with_suffix(".metrics.json"), metrics)
-    _write_json(report_path.with_suffix(".diagnosis.json"), {"signals": diagnosis})
+    _write_json(
+        report_path.with_suffix(".diagnosis.json"),
+        {
+            "config": diagnostics_config,
+            "trace_warnings": trace_warnings,
+            "signals": diagnosis,
+        },
+    )
     _write_json(report_path.with_suffix(".policy-diff.json"), {"changes": policy_diff})
 
 
 def cmd_analyze(args: argparse.Namespace) -> int:
     events = load_trace_events([Path(path) for path in args.traces])
+    diagnostics_config = load_diagnostic_config(args.diagnostics_config)
+    trace_warnings = validate_trace_events(events)
     metrics = compute_trace_metrics(events)
-    signals = diagnose_harness(metrics)
+    signals = diagnose_harness(metrics, config=diagnostics_config)
     changes = recommend_policy_changes(
         signals,
         current_policy=_load_policy_dict(Path(args.current_policy)) if args.current_policy else None,
     )
-    report = render_analysis_report(metrics=metrics, signals=signals, changes=changes)
+    report = render_analysis_report(
+        metrics=metrics,
+        signals=signals,
+        changes=changes,
+        trace_warnings=trace_warnings,
+    )
+    diagnostics_config_data = diagnostics_config.to_dict()
     metrics_data = metrics.to_dict()
+    trace_warnings_data = [warning.to_dict() for warning in trace_warnings]
     diagnosis_data = [signal.to_dict() for signal in signals]
     policy_diff_data = [change.to_dict() for change in changes]
     if args.out:
@@ -252,8 +274,10 @@ def cmd_analyze(args: argparse.Namespace) -> int:
         report_path.write_text(report + "\n", encoding="utf-8")
         _write_analysis_sidecars(
             report_path,
+            diagnostics_config=diagnostics_config_data,
             metrics=metrics_data,
             diagnosis=diagnosis_data,
+            trace_warnings=trace_warnings_data,
             policy_diff=policy_diff_data,
         )
     else:
@@ -508,6 +532,7 @@ def build_parser() -> argparse.ArgumentParser:
     analyze = subparsers.add_parser("analyze", help="Analyze exported agent traces")
     analyze.add_argument("--traces", nargs="+", required=True)
     analyze.add_argument("--current-policy")
+    analyze.add_argument("--diagnostics-config", help="Optional TOML file with diagnostic thresholds")
     analyze.add_argument("--out")
     analyze.set_defaults(func=cmd_analyze)
 

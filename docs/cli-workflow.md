@@ -9,6 +9,7 @@ project to adopt AdaHarness runtime modules.
 ```bash
 adaharness analyze \
   --traces traces/new-model.jsonl \
+  --diagnostics-config examples/diagnostics/default.toml \
   --current-policy policies/current.json \
   --out reports/harness-drift.md
 ```
@@ -23,6 +24,9 @@ reports/harness-drift.diagnosis.json
 reports/harness-drift.policy-diff.json
 ```
 
+`analysis.json` includes the diagnostics config, trace warnings, metrics,
+diagnosis signals, and suggested policy diff in one machine-readable artifact.
+
 ## Trace Format
 
 The initial trace format is JSONL. Each line is an event:
@@ -32,6 +36,20 @@ The initial trace format is JSONL. Each line is an event:
 {"task_id":"t1","event":"verifier","status":"pass","cost":0.002}
 {"task_id":"t1","event":"retry","reason":"tool_failure"}
 {"task_id":"t1","event":"final","success":true,"cost":0.012,"latency_ms":2200}
+```
+
+Canonical MVP events are `model_call`, `planner`, `verifier`, `retry`,
+`tool_call`, `tool_result_ignored`, `subagent`, `context`, and `final`.
+
+## Diagnostics Config
+
+Diagnostic thresholds are heuristics. Override them with TOML:
+
+```toml
+[diagnostics.verifier_overconstraint]
+min_events = 20
+max_catch_rate = 0.05
+min_cost_share = 0.20
 ```
 
 ## Experimental Commands

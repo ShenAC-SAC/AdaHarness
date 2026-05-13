@@ -8,7 +8,7 @@ underconstraint, and suggests policy diffs.
 The MVP flow is:
 
 ```text
-Trace JSONL -> TraceMetrics -> HarnessDiagnosis -> PolicyDiff -> Report
+Trace JSONL -> TraceValidation -> TraceMetrics -> HarnessDiagnosis -> PolicyDiff -> Report
 ```
 
 With `--out`, the CLI also writes a combined `analysis.json` artifact for CI and
@@ -48,6 +48,10 @@ AdaHarness should prefer observable metrics over abstract model scores:
 - tool failure rate
 - tool result ignored rate
 - success, cost, and latency deltas
+
+Diagnostic rules are configurable heuristics. The analyzer should report the
+rule threshold, observed evidence, evidence count, confidence, and missing-data
+warnings rather than presenting a threshold as benchmark truth.
 
 ## Experimental Layers
 

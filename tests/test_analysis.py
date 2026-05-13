@@ -4,8 +4,10 @@ from adaharness.analysis import (
     TraceEvent,
     compute_trace_metrics,
     diagnose_harness,
+    load_diagnostic_config,
     recommend_policy_changes,
     render_analysis_report,
+    validate_trace_events,
 )
 
 
@@ -38,6 +40,8 @@ class AnalysisTests(unittest.TestCase):
         self.assertIn("planning_control", [signal.control for signal in signals])
         self.assertIn(
             {
+                "confidence": "low",
+                "evidence_count": 5,
                 "field": "verification_control",
                 "from": "always",
                 "to": "selective",
@@ -72,3 +76,43 @@ class AnalysisTests(unittest.TestCase):
         self.assertIn("tool_control", [signal.control for signal in signals])
         self.assertIn("retry_control", [change.field for change in changes])
         self.assertIn("AdaHarness Drift Report", report)
+
+    def test_trace_validation_reports_unknown_events_and_missing_final(self) -> None:
+        warnings = validate_trace_events(
+            (
+                TraceEvent(task_id="t1", event="unknown_event"),
+                TraceEvent(task_id="t2", event="final", success=True),
+                TraceEvent(task_id="t2", event="final", success=True),
+            )
+        )
+
+        codes = [warning.code for warning in warnings]
+        self.assertIn("unknown_event", codes)
+        self.assertIn("missing_final", codes)
+        self.assertIn("multiple_final", codes)
+        self.assertIn("missing_cost", codes)
+        self.assertIn("missing_latency", codes)
+
+    def test_diagnostic_thresholds_can_be_loaded_from_toml(self) -> None:
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / "diagnostics.toml"
+            config_path.write_text(
+                "\n".join(
+                    [
+                        "[diagnostics.verifier_overconstraint]",
+                        "min_events = 50",
+                        "max_catch_rate = 0.02",
+                        "min_cost_share = 0.30",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            config = load_diagnostic_config(config_path)
+
+        self.assertEqual(config.verifier_overconstraint.min_events, 50)
+        self.assertEqual(config.verifier_overconstraint.max_catch_rate, 0.02)
+        self.assertEqual(config.verifier_overconstraint.min_cost_share, 0.30)

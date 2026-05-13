@@ -13,6 +13,8 @@ class PolicyChange:
     to_value: str
     reason: str
     evidence: tuple[str, ...]
+    confidence: str = "low"
+    evidence_count: int = 0
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "evidence", tuple(self.evidence))
@@ -57,6 +59,8 @@ def _change_for_signal(signal: DiagnosticSignal, current: dict[str, Any]) -> Pol
         to_value=new,
         reason=signal.message,
         evidence=signal.evidence,
+        confidence=signal.confidence,
+        evidence_count=signal.evidence_count,
     )
 
 

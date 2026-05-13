@@ -21,6 +21,20 @@ Required fields:
 - `event`: event type such as `planner`, `verifier`, `retry`, `tool_call`, or
   `final`.
 
+Canonical MVP event names:
+
+```text
+model_call
+planner
+verifier
+retry
+tool_call
+tool_result_ignored
+subagent
+context
+final
+```
+
 Optional fields:
 
 - `status`: `pass`, `fail`, `success`, or `failed`.
@@ -58,3 +72,39 @@ reports/harness-drift.policy-diff.json
 `analysis.json` combines the structured result for downstream CI. The other
 sidecars are stable slices for tools that only need metrics, diagnosis, or
 policy diffs.
+
+## Trace Validation
+
+`analyze` reports trace quality warnings for:
+
+- unknown event names
+- missing final events
+- multiple final events for one task
+- missing cost evidence
+- missing latency evidence
+
+Warnings do not fail analysis by default. They tell the user when a metric is
+based on incomplete trace evidence.
+
+## Diagnostics Config
+
+Diagnostic rules are heuristics. Defaults are intentionally small enough for the
+bundled examples, but production projects should raise event-count thresholds as
+their eval suites mature.
+
+```toml
+[diagnostics.verifier_overconstraint]
+min_events = 20
+max_catch_rate = 0.05
+min_cost_share = 0.20
+
+[diagnostics.confidence]
+medium_evidence_count = 50
+high_evidence_count = 200
+```
+
+Run with:
+
+```bash
+adaharness analyze --traces traces.jsonl --diagnostics-config diagnostics.toml
+```

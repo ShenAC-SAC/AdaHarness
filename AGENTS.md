@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-AdaHarness is a trace-first harness drift analyzer for LLM agent projects. Core MVP code lives in `adaharness/analysis/` for trace ingestion, metrics, diagnosis, policy diffs, and reports. `adaharness/cli.py` exposes the CLI, with `analyze` as the main command. `policies/` keeps policy schemas and recommendation helpers. `adapters/`, `project/`, `specs/`, `modules/`, and `harnesses/` are experimental scaffolding from the earlier runtime-control direction; do not expand them unless the task is explicitly about experiments. Tests live in `tests/`, examples in `examples/`, and generated outputs in `runs/`.
+AdaHarness is a trace-first harness drift analyzer for LLM agent projects. Core MVP code lives in `adaharness/analysis/` for trace ingestion, validation, metrics, diagnosis, policy diffs, and reports. `adaharness/cli.py` exposes the CLI, with `analyze` as the main command. `policies/` keeps policy schemas and recommendation helpers. `adapters/`, `project/`, `specs/`, `modules/`, and `harnesses/` are experimental scaffolding from the earlier runtime-control direction; do not expand them unless the task is explicitly about experiments. Tests live in `tests/`, examples in `examples/`, and generated outputs in `runs/`.
 
 ## Build, Test, and Development Commands
 

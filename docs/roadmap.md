@@ -23,6 +23,8 @@ remain experimental scaffolding. They are not the MVP product boundary.
 - Migration and policy-diff prototypes.
 - Trace analyzer that writes metrics, diagnosis, policy diff, and combined
   structured output.
+- Trace validation warnings, diagnostic confidence, and configurable diagnostic
+  thresholds.
 
 ## Phase 1 Trace Ingestion
 
@@ -30,7 +32,8 @@ Goal: make AdaHarness useful without runtime integration.
 
 - Define a small JSONL trace event format.
 - Load traces from one or more files.
-- Group events by task, model, and optional policy.
+- Validate canonical events, missing finals, duplicate finals, and missing cost
+  or latency evidence.
 - Accept traces exported by user projects without requiring adapters.
 
 Acceptance: `adaharness analyze --traces traces.jsonl` can load events and
@@ -43,7 +46,8 @@ Goal: diagnose over-control and under-control from observable signals.
 - Compute verifier catch rate, verifier cost share, retry success rate, retry
   waste rate, planner latency share, tool failure rate, and success rate.
 - Add explicit overconstraint and underconstraint signals.
-- Include evidence lines for every diagnosis.
+- Include evidence lines, confidence, evidence counts, and rule thresholds for
+  every diagnosis.
 
 Acceptance: the report can explain why a harness looks too heavy, too weak, or
 roughly appropriate.
