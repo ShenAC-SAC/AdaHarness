@@ -70,6 +70,34 @@ diagnostic rules 是可配置 heuristics，不是 benchmark truth。报告会展
 
 内置示例应当会标记 likely overconstraint：verifier 很少捕获问题却增加成本，explicit planning 占据较大 latency share。
 
+## 用户项目如何接入
+
+AdaHarness 不连接你的工具，也不执行你的 runtime。它只需要你的 agent 项目把自己的 eval 运行过程导出成 trace events。
+
+接入方式可以有三种：
+
+- 在项目中直接写 JSONL events。
+- 未来使用轻量 `TraceRecorder` helper 写出同样的 JSONL 格式。
+- 把已有日志或 observability exports 转成 AdaHarness trace events。
+
+例如，用户项目里的一次 tool call 可以记录为：
+
+```json
+{"task_id":"t1","event":"tool_call","tool":"search_docs","status":"success","latency_ms":180}
+```
+
+AdaHarness 会分析这条 event，但不会运行 `search_docs`。
+
+当前示例 traces：
+
+```text
+examples/traces/overconstrained_harness.jsonl
+examples/traces/undercontrolled_tool_use.jsonl
+examples/traces/balanced_harness.jsonl
+examples/traces/migration_old_model.jsonl
+examples/traces/migration_new_model.jsonl
+```
+
 ## 项目内 CLI
 
 CLI 不是 production agent runner。它是分析工具和 CI 工具，用于处理用户现有 agent 项目导出的 traces。provider credentials 通常应该留在用户自己的项目中。

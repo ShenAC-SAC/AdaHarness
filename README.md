@@ -87,6 +87,36 @@ For the bundled example, the report should flag likely overconstraint: the
 verifier rarely catches issues while adding cost, and explicit planning accounts
 for a large latency share.
 
+## How Projects Integrate
+
+AdaHarness does not connect to your tools or execute your runtime. It only needs
+your agent project to export trace events that describe what happened during
+your own eval runs.
+
+You can integrate in three ways:
+
+- Write JSONL events directly from your project.
+- Use a future `TraceRecorder` helper to write the same JSONL format.
+- Convert existing logs or observability exports into AdaHarness trace events.
+
+For example, a tool call in your project can become:
+
+```json
+{"task_id":"t1","event":"tool_call","tool":"search_docs","status":"success","latency_ms":180}
+```
+
+AdaHarness analyzes that event; it does not run `search_docs`.
+
+Additional example traces are available:
+
+```text
+examples/traces/overconstrained_harness.jsonl
+examples/traces/undercontrolled_tool_use.jsonl
+examples/traces/balanced_harness.jsonl
+examples/traces/migration_old_model.jsonl
+examples/traces/migration_new_model.jsonl
+```
+
 ## Project-Local CLI
 
 The CLI is not intended to be the production agent runner. It is an analysis and

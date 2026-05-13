@@ -1,0 +1,17 @@
+{"task_id":"mig_1","event":"planner","latency_ms":220}
+{"task_id":"mig_1","event":"verifier","status":"fail","cost":0.006}
+{"task_id":"mig_1","event":"retry","reason":"verification_failure"}
+{"task_id":"mig_1","event":"final","success":true,"cost":0.045,"latency_ms":1700}
+{"task_id":"mig_2","event":"planner","latency_ms":230}
+{"task_id":"mig_2","event":"verifier","status":"pass","cost":0.006}
+{"task_id":"mig_2","event":"final","success":true,"cost":0.044,"latency_ms":1680}
+{"task_id":"mig_3","event":"planner","latency_ms":210}
+{"task_id":"mig_3","event":"verifier","status":"fail","cost":0.006}
+{"task_id":"mig_3","event":"retry","reason":"verification_failure"}
+{"task_id":"mig_3","event":"final","success":true,"cost":0.046,"latency_ms":1720}
+{"task_id":"mig_4","event":"planner","latency_ms":240}
+{"task_id":"mig_4","event":"verifier","status":"pass","cost":0.006}
+{"task_id":"mig_4","event":"final","success":true,"cost":0.043,"latency_ms":1660}
+{"task_id":"mig_5","event":"planner","latency_ms":225}
+{"task_id":"mig_5","event":"verifier","status":"pass","cost":0.006}
+{"task_id":"mig_5","event":"final","success":true,"cost":0.045,"latency_ms":1690}

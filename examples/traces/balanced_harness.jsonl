@@ -1,0 +1,15 @@
+{"task_id":"balanced_1","event":"planner","latency_ms":50}
+{"task_id":"balanced_1","event":"verifier","status":"pass","cost":0.001}
+{"task_id":"balanced_1","event":"final","success":true,"cost":0.050,"latency_ms":1000}
+{"task_id":"balanced_2","event":"planner","latency_ms":45}
+{"task_id":"balanced_2","event":"verifier","status":"pass","cost":0.001}
+{"task_id":"balanced_2","event":"final","success":true,"cost":0.048,"latency_ms":980}
+{"task_id":"balanced_3","event":"planner","latency_ms":55}
+{"task_id":"balanced_3","event":"verifier","status":"pass","cost":0.001}
+{"task_id":"balanced_3","event":"final","success":true,"cost":0.052,"latency_ms":1020}
+{"task_id":"balanced_4","event":"planner","latency_ms":48}
+{"task_id":"balanced_4","event":"verifier","status":"pass","cost":0.001}
+{"task_id":"balanced_4","event":"final","success":true,"cost":0.049,"latency_ms":990}
+{"task_id":"balanced_5","event":"planner","latency_ms":52}
+{"task_id":"balanced_5","event":"verifier","status":"pass","cost":0.001}
+{"task_id":"balanced_5","event":"final","success":true,"cost":0.051,"latency_ms":1010}

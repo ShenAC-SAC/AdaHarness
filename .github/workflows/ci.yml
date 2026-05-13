@@ -37,7 +37,39 @@ jobs:
       - name: Run lint
         run: uv run ruff check .
 
-      - name: Smoke test CLI
+      - name: Smoke test analyze CLI
+        run: |
+          mkdir -p runs
+          uv run adaharness analyze \
+            --traces examples/traces/overconstrained_harness.jsonl \
+            --current-policy examples/policies/heavy_policy.json \
+            --diagnostics-config examples/diagnostics/default.toml \
+            --out runs/harness-drift.md
+          test -f runs/harness-drift.md
+          test -f runs/harness-drift.analysis.json
+          test -f runs/harness-drift.metrics.json
+          test -f runs/harness-drift.diagnosis.json
+          test -f runs/harness-drift.policy-diff.json
+
+  experimental-smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install package
+        run: uv sync --frozen --group dev
+
+      - name: Smoke test experimental CLI
         run: |
           mkdir -p runs
           uv run adaharness profile --model small-sim --taskset tasks/profiler --out runs/small-profile.json
