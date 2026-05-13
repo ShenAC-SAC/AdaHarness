@@ -1,3 +1,9 @@
+"""Reference harness presets and runtime experiments.
+
+These exports support lab commands and tests. The MVP analyzes traces from the
+user's existing agent runtime instead of requiring AdaHarness harnesses.
+"""
+
 from adaharness.harnesses.adaptive import build_adaptive_harness
 from adaharness.harnesses.bare import BARE_HARNESS
 from adaharness.harnesses.light import LIGHT_HARNESS

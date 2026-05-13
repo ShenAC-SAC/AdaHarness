@@ -4,6 +4,9 @@
 
 Accepted
 
+Current scope: profiler/lab compatibility. ADR 0007 makes trace evidence, not
+abstract profile scores, the primary MVP input.
+
 ## Context
 
 Policy generation and synthetic evaluation already depend on top-level

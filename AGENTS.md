@@ -2,15 +2,15 @@
 
 ## Project Structure & Module Organization
 
-AdaHarness is a small Python package centered on adaptive agent harness evaluation. Core code lives in `adaharness/`: `cli.py` exposes the command-line interface, `harnesses/` defines bare/light/strong/adaptive harness behavior, `policies/` generates harness policies, `profiler/` models capability profiles, `evals/` loads task sets and computes metrics, and `runtime/` holds tracing, state, and budget helpers. Tests are in `tests/`, runnable examples are in `examples/`, and JSON fixture task sets are in `tasks/eval/` and `tasks/profiler/`. Generated run outputs belong under `runs/` and should not be treated as source.
+AdaHarness is a trace-first harness drift analyzer for LLM agent projects. Core MVP code lives in `adaharness/analysis/` for trace ingestion, metrics, diagnosis, policy diffs, and reports. `adaharness/cli.py` exposes the CLI, with `analyze` as the main command. `policies/` keeps policy schemas and recommendation helpers. `adapters/`, `project/`, `specs/`, `modules/`, and `harnesses/` are experimental scaffolding from the earlier runtime-control direction; do not expand them unless the task is explicitly about experiments. Tests live in `tests/`, examples in `examples/`, and generated outputs in `runs/`.
 
 ## Build, Test, and Development Commands
 
 - `uv sync --group dev` creates the local `.venv`, installs the package, and records versions in `uv.lock`.
 - `uv run pytest -q` runs the full test suite configured by `pyproject.toml`.
 - `uv run ruff check .` runs lint checks with the repo’s Python 3.10 and 100-column settings.
-- `uv run adaharness compare --model example-model --taskset tasks/eval` runs the main evaluation flow.
-- `uv run python -m adaharness.cli profile --model example-model` runs the CLI module directly.
+- `uv run adaharness analyze --traces examples/traces/overconstrained_harness.jsonl --current-policy examples/policies/heavy_policy.json --out runs/harness-drift.md` runs the MVP trace analysis flow.
+- `uv run python -m compileall adaharness tests` catches syntax issues before CI.
 
 ## Coding Style & Naming Conventions
 
@@ -18,7 +18,7 @@ Use Python 3.10+ typing syntax such as `list[Harness]` and `dict[str, Any]`. Kee
 
 ## Testing Guidelines
 
-The test suite uses `unittest` style under pytest discovery. Add tests in `tests/test_*.py`, with classes ending in `Tests` and methods beginning with `test_`. Cover CLI behavior, policy choices, metric calculations, and task loading whenever those contracts change. Keep JSON fixtures minimal and place new evaluation tasks in the relevant `tasks/` subdirectory.
+The test suite uses `unittest` style under pytest discovery. Add tests in `tests/test_*.py`, with classes ending in `Tests` and methods beginning with `test_`. Prioritize trace loading, metrics, diagnosis, policy diff recommendations, and CLI artifacts when MVP contracts change. Keep JSON/JSONL fixtures minimal and place example traces under `examples/traces/`.
 
 ## Commit & Pull Request Guidelines
 

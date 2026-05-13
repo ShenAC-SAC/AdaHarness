@@ -21,6 +21,8 @@ remain experimental scaffolding. They are not the MVP product boundary.
   runtime scaffolding.
 - Generic external trace normalization.
 - Migration and policy-diff prototypes.
+- Trace analyzer that writes metrics, diagnosis, policy diff, and combined
+  structured output.
 
 ## Phase 1 Trace Ingestion
 
@@ -55,7 +57,8 @@ Goal: suggest changes without controlling the user's runtime.
   `aggressive -> bounded`.
 - Attach a reason and evidence to every suggested change.
 
-Acceptance: `analyze` writes `policy_diff.json` and a human-readable report.
+Acceptance: `analyze` writes `analysis.json`, `policy_diff.json`, and a
+human-readable report.
 
 ## Phase 4 Migration Report
 

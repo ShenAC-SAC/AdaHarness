@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted
+Superseded for MVP by ADR 0007 and ADR 0008. Controller-oriented specs remain a
+future experimental direction, not the current user path.
 
 ## Context
 

@@ -50,8 +50,13 @@ class AnalyzeCliTests(unittest.TestCase):
 
             self.assertEqual(exit_code, 0)
             self.assertTrue(report_path.exists())
+            self.assertTrue(report_path.with_suffix(".analysis.json").exists())
             self.assertTrue(report_path.with_suffix(".metrics.json").exists())
             self.assertTrue(report_path.with_suffix(".diagnosis.json").exists())
             self.assertTrue(report_path.with_suffix(".policy-diff.json").exists())
+            analysis = json.loads(report_path.with_suffix(".analysis.json").read_text(encoding="utf-8"))
+            self.assertIn("metrics", analysis)
+            self.assertIn("diagnosis", analysis)
+            self.assertIn("policy_diff", analysis)
             policy_diff = json.loads(report_path.with_suffix(".policy-diff.json").read_text(encoding="utf-8"))
             self.assertEqual(policy_diff["changes"][0]["field"], "verification_control")

@@ -1,52 +1,60 @@
-# Metrics
+# Trace Format and Metrics
 
-AdaHarness compares harnesses by measuring both task performance and orchestration
-overhead. The goal is to identify the minimal effective harness, not simply the
-most complex one.
+The MVP analyzes traces exported by an existing agent project. It does not need
+AdaHarness to run the agent or control runtime hooks.
 
-## Core Metrics
+## Trace Format
 
-- `success_rate`: fraction of tasks completed by a harness.
-- `estimated_cost`: relative cost estimate for running the harness.
-- `estimated_latency`: relative latency estimate for running the harness.
-- `retry_count`: number of retries implied by the harness policy.
-- `harness_lift`: success-rate improvement over the `bare` baseline.
-- `harness_tax`: cost multiplier relative to the `bare` baseline.
-- `minimal_effective_harness_score`: success adjusted by harness tax.
-- `overconstraint_penalty`: cost and latency penalty not justified by lift.
-- `adaptation_gain`: adaptive MEH score compared with the best fixed harness.
-- `harness_drift_score`: mismatch between an existing policy and a replacement
-  model's recommended policy.
-- `underconstraint_risk`: expected failure risk when a weak model receives too
-  little planning, verification, retry, or tool control.
-- `policy_delta`: size of the change between two policies or controller specs.
+Use JSONL first. Each line is one event:
 
-## Interpretation
-
-`bare` is the baseline for relative metrics. A stronger harness is useful when
-its lift is large enough to justify its tax. If two harnesses have similar
-success rates, prefer the one with the lower tax and simpler policy.
-
-This is the minimal effective harness rule: choose the lightest control plan
-that satisfies task performance, risk, and budget requirements.
-
-Example report:
-
-```bash
-adaharness compare --model small-sim --taskset tasks/eval --out runs/compare.json
-adaharness report runs/compare.json
+```json
+{"task_id":"t1","event":"planner","latency_ms":320}
+{"task_id":"t1","event":"verifier","status":"pass","cost":0.002}
+{"task_id":"t1","event":"retry","reason":"tool_failure"}
+{"task_id":"t1","event":"tool_call","status":"failed","reason":"timeout"}
+{"task_id":"t1","event":"final","success":true,"cost":0.012,"latency_ms":2200}
 ```
 
-The report table is the first place to check whether `adaptive` is choosing a
-reasonable tradeoff compared with fixed `bare`, `light`, and `strong` presets.
+Required fields:
 
-For model migration, the main question is whether the old control surface still
-fits the new model. High drift means the user should inspect policy and
-controller diffs before shipping the replacement model.
+- `task_id`: stable task or eval case identifier.
+- `event`: event type such as `planner`, `verifier`, `retry`, `tool_call`, or
+  `final`.
 
-Matrix reports compare `model x harness` combinations:
+Optional fields:
 
-```bash
-uv run adaharness compare --models small-sim,strong-sim --taskset tasks/eval --out runs/matrix.json
-uv run adaharness report runs/matrix.json
+- `status`: `pass`, `fail`, `success`, or `failed`.
+- `success`: boolean final outcome for `final` events.
+- `cost`, `latency_ms`, `tokens`: observed cost and overhead.
+- `model`, `policy`, `control`, `reason`: grouping and explanation metadata.
+
+## MVP Metrics
+
+AdaHarness prefers observable harness signals over abstract model capability
+scores:
+
+- `success_rate`: final success rate across traced tasks.
+- `verifier_catch_rate`: fraction of verifier events that caught a failure.
+- `verifier_cost_share`: cost share spent on verifier events.
+- `planner_latency_share`: latency share spent on planner events.
+- `retry_success_rate`: fraction of retried tasks that eventually succeeded.
+- `retry_waste_rate`: retry rate on tasks that still failed.
+- `failed_without_retry_rate`: failed tasks that had no retry event.
+- `tool_failure_rate`: failed tool calls over all tool calls.
+- `tool_result_ignored_rate`: tasks that emitted `tool_result_ignored`.
+
+## Structured Output
+
+`adaharness analyze --out reports/harness-drift.md` writes:
+
+```text
+reports/harness-drift.md
+reports/harness-drift.analysis.json
+reports/harness-drift.metrics.json
+reports/harness-drift.diagnosis.json
+reports/harness-drift.policy-diff.json
 ```
+
+`analysis.json` combines the structured result for downstream CI. The other
+sidecars are stable slices for tools that only need metrics, diagnosis, or
+policy diffs.

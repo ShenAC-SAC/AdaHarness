@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted
+Superseded for MVP by ADR 0007. The runtime boundary remains relevant only for
+experimental reference-runtime work.
 
 ## Context
 

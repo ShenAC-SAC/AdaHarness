@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted
+Superseded for MVP by ADR 0007 and ADR 0008. The policy-to-spec compiler remains
+experimental scaffolding.
 
 ## Context
 

@@ -11,6 +11,9 @@ The MVP flow is:
 Trace JSONL -> TraceMetrics -> HarnessDiagnosis -> PolicyDiff -> Report
 ```
 
+With `--out`, the CLI also writes a combined `analysis.json` artifact for CI and
+tooling.
+
 This keeps integration light: users can export logs without adopting AdaHarness
 modules, adapters, or runtime hooks.
 

@@ -221,6 +221,14 @@ def _write_analysis_sidecars(
     diagnosis: list[dict[str, Any]],
     policy_diff: list[dict[str, Any]],
 ) -> None:
+    _write_json(
+        report_path.with_suffix(".analysis.json"),
+        {
+            "metrics": metrics,
+            "diagnosis": {"signals": diagnosis},
+            "policy_diff": {"changes": policy_diff},
+        },
+    )
     _write_json(report_path.with_suffix(".metrics.json"), metrics)
     _write_json(report_path.with_suffix(".diagnosis.json"), {"signals": diagnosis})
     _write_json(report_path.with_suffix(".policy-diff.json"), {"changes": policy_diff})
@@ -503,7 +511,10 @@ def build_parser() -> argparse.ArgumentParser:
     analyze.add_argument("--out")
     analyze.set_defaults(func=cmd_analyze)
 
-    calibrate = subparsers.add_parser("calibrate", help="Calibrate controls inside a host agent project")
+    calibrate = subparsers.add_parser(
+        "calibrate",
+        help="Experimental: calibrate controls through a host project adapter",
+    )
     calibrate.add_argument("--config", required=True)
     calibrate.add_argument("--env-file")
     calibrate.add_argument("--adapter")
@@ -513,7 +524,7 @@ def build_parser() -> argparse.ArgumentParser:
     calibrate.add_argument("--out-dir")
     calibrate.set_defaults(func=cmd_calibrate)
 
-    profile = subparsers.add_parser("profile", help="Run model profiler")
+    profile = subparsers.add_parser("profile", help="Lab: run deterministic model profiler")
     profile.add_argument("--model", required=True)
     profile.add_argument("--config")
     profile.add_argument("--env-file")
@@ -523,7 +534,7 @@ def build_parser() -> argparse.ArgumentParser:
     profile.add_argument("--out")
     profile.set_defaults(func=cmd_profile)
 
-    recommend = subparsers.add_parser("recommend", help="Recommend a harness policy")
+    recommend = subparsers.add_parser("recommend", help="Lab: recommend a harness policy from a profile")
     recommend.add_argument("--config")
     recommend.add_argument("--env-file")
     recommend.add_argument("--profile", required=True)
@@ -532,13 +543,13 @@ def build_parser() -> argparse.ArgumentParser:
     recommend.add_argument("--out")
     recommend.set_defaults(func=cmd_recommend)
 
-    assemble = subparsers.add_parser("assemble", help="Compile a policy into a harness spec")
+    assemble = subparsers.add_parser("assemble", help="Experimental: compile a policy into a harness spec")
     assemble.add_argument("--policy", required=True)
     assemble.add_argument("--name", default="compiled_harness")
     assemble.add_argument("--out")
     assemble.set_defaults(func=cmd_assemble)
 
-    compare = subparsers.add_parser("compare", help="Compare harness presets")
+    compare = subparsers.add_parser("compare", help="Lab: compare harness presets")
     compare.add_argument("--model")
     compare.add_argument("--models")
     compare.add_argument("--config")
@@ -551,7 +562,7 @@ def build_parser() -> argparse.ArgumentParser:
     compare.add_argument("--out")
     compare.set_defaults(func=cmd_compare)
 
-    run = subparsers.add_parser("run", help="Run a task with a compiled harness spec")
+    run = subparsers.add_parser("run", help="Experimental: run a task with a compiled harness spec")
     run.add_argument("--harness-spec", required=True)
     run.add_argument("--task", required=True)
     run.add_argument("--model", required=True)
@@ -563,7 +574,7 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--out")
     run.set_defaults(func=cmd_run)
 
-    migrate = subparsers.add_parser("migrate", help="Compare current and recommended harness policy")
+    migrate = subparsers.add_parser("migrate", help="Lab: compare current and recommended harness policy")
     migrate.add_argument("--config")
     migrate.add_argument("--env-file")
     migrate.add_argument("--from-profile", required=True)
@@ -574,7 +585,7 @@ def build_parser() -> argparse.ArgumentParser:
     migrate.add_argument("--out")
     migrate.set_defaults(func=cmd_migrate)
 
-    refine = subparsers.add_parser("refine", help="Propose policy updates from run traces")
+    refine = subparsers.add_parser("refine", help="Lab: propose policy updates from run traces")
     refine.add_argument("--policy", required=True)
     refine.add_argument("--trace", required=True)
     refine.add_argument("--name", default="refined_harness")
@@ -586,7 +597,7 @@ def build_parser() -> argparse.ArgumentParser:
     import_trace.add_argument("--out")
     import_trace.set_defaults(func=cmd_import_trace)
 
-    config = subparsers.add_parser("config", help="Inspect or validate project configuration")
+    config = subparsers.add_parser("config", help="Experimental: inspect or validate project configuration")
     config_subparsers = config.add_subparsers(dest="config_command", required=True)
 
     inspect_config = config_subparsers.add_parser("inspect", help="Print resolved configuration")
@@ -599,7 +610,7 @@ def build_parser() -> argparse.ArgumentParser:
     validate_config.add_argument("--env-file")
     validate_config.set_defaults(func=cmd_config_validate)
 
-    report = subparsers.add_parser("report", help="Render a compare run as Markdown")
+    report = subparsers.add_parser("report", help="Lab: render a compare run as Markdown")
     report.add_argument("run")
     report.set_defaults(func=cmd_report)
 

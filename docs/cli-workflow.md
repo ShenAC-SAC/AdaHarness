@@ -17,6 +17,7 @@ Expected outputs:
 
 ```text
 reports/harness-drift.md
+reports/harness-drift.analysis.json
 reports/harness-drift.metrics.json
 reports/harness-drift.diagnosis.json
 reports/harness-drift.policy-diff.json

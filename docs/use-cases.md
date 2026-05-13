@@ -60,6 +60,7 @@ when harness drift or underconstraint risk crosses explicit thresholds.
 
 | Artifact | Purpose |
 | --- | --- |
+| `analysis.json` | Combined machine-readable result for CI or dashboards. |
 | `metrics.json` | Observable harness metrics from traces. |
 | `diagnosis.json` | Overconstraint and underconstraint signals with evidence. |
 | `policy_diff.json` | Suggested changes to the current harness policy. |

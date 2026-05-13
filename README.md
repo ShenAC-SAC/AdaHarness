@@ -39,7 +39,7 @@ visible from traces before it tries to control any runtime.
 Early experimental MVP.
 
 The current codebase still contains earlier policy compiler, adapter, and
-reference runtime foundations. Those are now considered experimental. The MVP is
+reference runtime foundations. Those are retained as experimental code. The MVP is
 being reduced to a lighter loop:
 
 ```text
@@ -86,71 +86,23 @@ The CLI is not intended to be the production agent runner. It is an analysis and
 CI tool for traces exported by the user's existing agent project. Provider
 credentials should normally stay in that project.
 
-The previous project adapter flow remains experimental:
+When `--out` is used, `analyze` writes a Markdown report plus structured
+sidecars:
 
-```toml
-[project]
-name = "my-agent"
-adapter = "my_agent.adaharness_adapter:MyAgentAdapter"
-taskset = "tests/adaharness_tasks"
-artifact_dir = ".adaharness"
-
-[defaults]
-risk = "medium"
-budget = "standard"
+```text
+runs/harness-drift.md
+runs/harness-drift.analysis.json
+runs/harness-drift.metrics.json
+runs/harness-drift.diagnosis.json
+runs/harness-drift.policy-diff.json
 ```
 
-```bash
-uv run adaharness config validate --config adaharness.toml
-uv run adaharness calibrate --config adaharness.toml
-```
+Older commands such as `profile`, `compare`, `recommend`, `assemble`,
+`calibrate`, and reference `run` remain available for experiments and smoke
+tests. They are not the main MVP path.
 
-The current CLI also includes lab commands backed by AdaHarness' reference
-runtime. They are useful for smoke tests and examples, not as the main product
-flow:
-
-```bash
-uv run python -m adaharness.cli profile --model example-model
-uv run python -m adaharness.cli compare --model example-model --taskset tasks/eval
-```
-
-Provider selection is available for the model-adapter boundary. The current
-profiler remains deterministic and is mainly a lab path.
-
-```bash
-uv run adaharness profile --provider mock --model mock-model
-uv run adaharness compare --provider openai-compatible --model gpt-5.5 --taskset tasks/eval
-uv run adaharness compare --provider openai-compatible --model deepseek-chat --base-url <provider-url> --taskset tasks/eval
-uv run adaharness compare --provider openai-compatible --model qwen --base-url <provider-url> --taskset tasks/eval
-```
-
-Compare multiple model profiles against multiple harnesses:
-
-```bash
-uv run adaharness compare \
-  --models small-sim,strong-sim \
-  --harnesses bare,light,structured,strong,adaptive \
-  --taskset tasks/eval \
-  --out runs/model-harness-matrix.json
-
-uv run adaharness report runs/model-harness-matrix.json
-```
-
-Optional provider dependencies can be installed when needed:
-
-```bash
-uv sync --group dev --extra openai
-uv sync --group dev --extra anthropic
-uv sync --group dev --extra local
-```
-
-See `docs/models.md` for the model support strategy. In short, OpenAI and
-Anthropic are useful strong-model baselines, but AdaHarness is especially aimed
-at comparing harness choices for open, local, and OpenAI-compatible models where
-the right orchestration layer may have a larger effect.
-
-See `docs/architecture.md`, `docs/roadmap.md`, and `docs/use-cases.md` for the
-current trace-first MVP boundary.
+See `docs/metrics.md`, `docs/architecture.md`, `docs/roadmap.md`,
+`docs/use-cases.md`, and `docs/experimental.md` for the current boundary.
 
 ## Why
 
