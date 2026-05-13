@@ -39,7 +39,15 @@ traces -> metrics -> diagnosis -> suggested policy diff -> report
 
 ## 安装
 
-从 release package 安装：
+从 GitHub `main` 安装当前开发版：
+
+```bash
+uv tool install git+https://github.com/ShenAC-SAC/AdaHarness.git
+# 或者在源码目录中：
+uv run adaharness --help
+```
+
+等发布 tagged PyPI release 后，可以使用：
 
 ```bash
 uv tool install adaharness
@@ -56,6 +64,13 @@ uv sync --group dev
 
 ```bash
 adaharness init
+```
+
+如果你是在源码目录中开发，命令前加 `uv run`：
+
+```bash
+uv run adaharness init
+uv run adaharness capture --help
 ```
 
 这会生成 `.adaharness/diagnostics/default.toml`、`.adaharness/policies/current-policy.json`、内置 `agent-smoke` 测试集、示例 traces 和 reports 目录。真实数据应该用 `capture` 调你的单任务 agent 入口生成：

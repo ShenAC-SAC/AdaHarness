@@ -1,4 +1,4 @@
-from adaharness.cli import main
+from adaharness.cli import build_parser, main
 from adaharness.profiler.profile_schema import ModelProfile
 from contextlib import redirect_stdout
 from io import StringIO
@@ -9,6 +9,13 @@ import unittest
 
 
 class CliTests(unittest.TestCase):
+    def test_parser_exposes_primary_commands(self) -> None:
+        help_text = build_parser().format_help()
+
+        self.assertIn("init", help_text)
+        self.assertIn("capture", help_text)
+        self.assertIn("analyze", help_text)
+
     def test_compare_cli_runs(self) -> None:
         output = StringIO()
         with redirect_stdout(output):

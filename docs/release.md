@@ -1,6 +1,13 @@
 # Release Checklist
 
-AdaHarness is designed to be usable after package installation:
+AdaHarness is designed to be usable after package installation. Before a PyPI
+release is published, install the current main branch with:
+
+```bash
+uv tool install git+https://github.com/ShenAC-SAC/AdaHarness.git
+```
+
+After a tagged PyPI release is published:
 
 ```bash
 uv tool install adaharness

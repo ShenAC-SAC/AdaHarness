@@ -50,7 +50,15 @@ traces -> metrics -> diagnosis -> suggested policy diff -> report
 
 ## Install
 
-From a release package:
+Current development install from GitHub `main`:
+
+```bash
+uv tool install git+https://github.com/ShenAC-SAC/AdaHarness.git
+# or, inside a checkout:
+uv run adaharness --help
+```
+
+After a tagged PyPI release is published:
 
 ```bash
 uv tool install adaharness
@@ -67,6 +75,13 @@ After installation, you can create starter files:
 
 ```bash
 adaharness init
+```
+
+If you are working from a source checkout, prefix commands with `uv run`:
+
+```bash
+uv run adaharness init
+uv run adaharness capture --help
 ```
 
 This creates `.adaharness/diagnostics/default.toml`, `.adaharness/policies/current-policy.json`,
