@@ -111,6 +111,14 @@ def _final_event_warnings(events: tuple[TraceEvent, ...]) -> list[TraceValidatio
 
 def _missing_evidence_warnings(events: tuple[TraceEvent, ...]) -> list[TraceValidationWarning]:
     warnings = []
+    verifier_events = [event for event in events if event.is_event("verifier", "verification")]
+    planner_events = [event for event in events if event.is_event("planner", "plan")]
+    tool_events = [event for event in events if event.is_event("tool_call", "tool")]
+    ignored_tool_events = [
+        event
+        for event in events
+        if event.is_event("tool_result_ignored") or event.reason == "tool_result_ignored"
+    ]
     if not any(event.cost is not None for event in events):
         warnings.append(
             TraceValidationWarning(
@@ -120,6 +128,15 @@ def _missing_evidence_warnings(events: tuple[TraceEvent, ...]) -> list[TraceVali
                 evidence=("cost_fields=0",),
             )
         )
+    elif verifier_events and not any(event.cost is not None for event in verifier_events):
+        warnings.append(
+            TraceValidationWarning(
+                code="missing_verifier_cost",
+                severity="low",
+                message="Verifier events have no cost values; verifier cost-share diagnostics may be incomplete.",
+                evidence=(f"verifier_events={len(verifier_events)}", "verifier_cost_fields=0"),
+            )
+        )
     if not any(event.latency_ms is not None for event in events):
         warnings.append(
             TraceValidationWarning(
@@ -127,6 +144,24 @@ def _missing_evidence_warnings(events: tuple[TraceEvent, ...]) -> list[TraceVali
                 severity="low",
                 message="No latency values were recorded; latency diagnostics have weak evidence.",
                 evidence=("latency_ms_fields=0",),
+            )
+        )
+    elif planner_events and not any(event.latency_ms is not None for event in planner_events):
+        warnings.append(
+            TraceValidationWarning(
+                code="missing_planner_latency",
+                severity="low",
+                message="Planner events have no latency values; planner latency-share diagnostics may be incomplete.",
+                evidence=(f"planner_events={len(planner_events)}", "planner_latency_fields=0"),
+            )
+        )
+    if ignored_tool_events and not tool_events:
+        warnings.append(
+            TraceValidationWarning(
+                code="missing_tool_call_denominator",
+                severity="low",
+                message="Ignored tool-result events were recorded without tool_call events; ignored-result rate uses a fallback denominator.",
+                evidence=(f"tool_result_ignored_count={len(ignored_tool_events)}", "tool_call_count=0"),
             )
         )
     return warnings

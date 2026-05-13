@@ -163,8 +163,9 @@ def _underconstraint_signals(
             )
         )
     ignored = config.tool_result_ignored
+    ignored_evidence_count = max(metrics.tool_call_count, metrics.tool_result_ignored_count)
     if (
-        metrics.tool_call_count >= ignored.min_tool_calls
+        ignored_evidence_count >= ignored.min_tool_calls
         and metrics.tool_result_ignored_rate >= ignored.min_ignored_rate
     ):
         signals.append(
@@ -173,13 +174,17 @@ def _underconstraint_signals(
                 control="tool_control",
                 severity="high",
                 message="The agent appears to ignore tool results.",
-                evidence=(f"tool_result_ignored_rate={metrics.tool_result_ignored_rate:.2f}",),
+                evidence=(
+                    f"tool_result_ignored_count={metrics.tool_result_ignored_count}",
+                    f"tool_result_ignored_rate={metrics.tool_result_ignored_rate:.2f}",
+                ),
                 rule=(
-                    f"tool_call_count >= {ignored.min_tool_calls} and "
+                    f"max(tool_call_count, tool_result_ignored_count) >= {ignored.min_tool_calls} "
+                    "and "
                     f"tool_result_ignored_rate >= {ignored.min_ignored_rate:.2f}"
                 ),
-                evidence_count=metrics.tool_call_count,
-                confidence=_confidence(metrics.tool_call_count, config),
+                evidence_count=ignored_evidence_count,
+                confidence=_confidence(ignored_evidence_count, config),
                 missing_data=_missing_data(metrics, control="tool_control"),
             )
         )

@@ -82,6 +82,9 @@ policy diffs.
 - multiple final events for one task
 - missing cost evidence
 - missing latency evidence
+- verifier events without verifier cost values
+- planner events without planner latency values
+- ignored tool-result events without `tool_call` denominator events
 
 Warnings do not fail analysis by default. They tell the user when a metric is
 based on incomplete trace evidence.

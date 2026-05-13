@@ -26,6 +26,7 @@ class TraceMetrics:
     retry_waste_rate: float
     failed_without_retry_rate: float
     tool_call_count: int
+    tool_result_ignored_count: int
     tool_failure_rate: float
     tool_result_ignored_rate: float
 
@@ -106,6 +107,7 @@ def compute_trace_metrics(events: tuple[TraceEvent, ...]) -> TraceMetrics:
         retry_waste_rate=_ratio(len(retried_failures), len(retry_tasks)),
         failed_without_retry_rate=_ratio(len(failed_without_retry), max(1, len(failed_tasks))),
         tool_call_count=len(tool_events),
+        tool_result_ignored_count=len(ignored_tool_events),
         tool_failure_rate=_ratio(len(tool_failures), len(tool_events)),
         tool_result_ignored_rate=_ratio(len(ignored_tool_events), max(1, len(tool_events))),
     )

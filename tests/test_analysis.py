@@ -77,6 +77,23 @@ class AnalysisTests(unittest.TestCase):
         self.assertIn("retry_control", [change.field for change in changes])
         self.assertIn("AdaHarness Drift Report", report)
 
+    def test_ignored_tool_result_without_tool_call_still_signals_underconstraint(self) -> None:
+        events = (
+            TraceEvent(task_id="t1", event="tool_result_ignored"),
+            TraceEvent(task_id="t1", event="final", success=False),
+        )
+
+        metrics = compute_trace_metrics(events)
+        signals = diagnose_harness(metrics)
+
+        self.assertEqual(metrics.tool_call_count, 0)
+        self.assertEqual(metrics.tool_result_ignored_count, 1)
+        self.assertEqual(metrics.tool_result_ignored_rate, 1.0)
+        self.assertIn(
+            "tool_control",
+            [signal.control for signal in signals if signal.kind == "underconstraint"],
+        )
+
     def test_trace_validation_reports_unknown_events_and_missing_final(self) -> None:
         warnings = validate_trace_events(
             (
@@ -92,6 +109,21 @@ class AnalysisTests(unittest.TestCase):
         self.assertIn("multiple_final", codes)
         self.assertIn("missing_cost", codes)
         self.assertIn("missing_latency", codes)
+
+    def test_trace_validation_reports_control_specific_missing_evidence(self) -> None:
+        warnings = validate_trace_events(
+            (
+                TraceEvent(task_id="t1", event="verifier"),
+                TraceEvent(task_id="t1", event="planner"),
+                TraceEvent(task_id="t1", event="tool_result_ignored"),
+                TraceEvent(task_id="t1", event="final", success=True, cost=0.01, latency_ms=100),
+            )
+        )
+
+        codes = [warning.code for warning in warnings]
+        self.assertIn("missing_verifier_cost", codes)
+        self.assertIn("missing_planner_latency", codes)
+        self.assertIn("missing_tool_call_denominator", codes)
 
     def test_diagnostic_thresholds_can_be_loaded_from_toml(self) -> None:
         import tempfile
