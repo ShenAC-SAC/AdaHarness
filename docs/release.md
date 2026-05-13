@@ -48,16 +48,16 @@ import json
 import sys
 
 prompt = sys.argv[1]
-if "19 + 23" in prompt:
-    print("42")
-elif "valid JSON" in prompt:
+if "valid JSON" in prompt:
     print(json.dumps({"status": "ok", "value": 7}))
-elif "analyzes traces" in prompt:
+elif "three comma-separated words" in prompt:
+    print("trace, policy, harness")
+elif "uppercase" in prompt:
+    print("CALIBRATED")
+elif "one lowercase word" in prompt:
     print("traces")
-elif "NO_TOOL_USED" in prompt:
-    print("NO_TOOL_USED")
-elif "READY" in prompt:
-    print("READY")
+elif "Do not use the word" in prompt:
+    print("AdaHarness analyzes traces.")
 else:
     print("ADAHARNESS_OK")
 PY

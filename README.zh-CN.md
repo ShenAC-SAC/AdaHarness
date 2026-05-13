@@ -73,7 +73,7 @@ uv run adaharness init
 uv run adaharness capture --help
 ```
 
-这会生成 `.adaharness/diagnostics/default.toml`、`.adaharness/policies/current-policy.json`、内置 `agent-smoke` 测试集、示例 traces 和 reports 目录。真实数据应该用 `capture` 调你的单任务 agent 入口生成：
+这会生成 `.adaharness/diagnostics/default.toml`、`.adaharness/policies/current-policy.json`、内置 workload suites、示例 traces 和 reports 目录。真实数据应该用 `capture` 调你的单任务 agent 入口生成：
 
 ```bash
 adaharness capture \
@@ -96,7 +96,12 @@ adaharness analyze \
 
 ## MVP 用法
 
-当前推荐的 MVP 流程是 trace-first，但 AdaHarness 应该帮助用户生成 traces。它不假设用户项目里已经有一个叫 `agent eval` 的指令，也不要求用户先准备测试集。`capture` 自带 `agent-smoke` 测试集，可以逐条调用一个普通的单任务 agent 入口，做简单期望判断，并写出 AdaHarness traces。
+当前推荐的 MVP 流程是 trace-first，但 AdaHarness 应该帮助用户生成 traces。它不假设用户项目里已经有一个叫 `agent eval` 的指令，也不要求用户先准备测试集。`capture` 自带 workload suites，可以逐条调用一个普通的单任务 agent 入口，做确定性判断，并写出 AdaHarness traces。
+
+内置 suites：
+
+- `connectivity-smoke`：只做接入链路自检，确认命令能跑通。
+- `ifeval-lite`：受 IFEval 式可验证指令约束启发的 instruction-following workload，但不是官方 IFEval 数据集。
 
 内置测试集本质上就是下面这种 JSONL，后续可以替换：
 
@@ -112,7 +117,7 @@ adaharness capture \
   -- python your_agent.py --prompt "{prompt}"
 ```
 
-可以用 `--list-suites` 查看内置测试集。只有当你要替换成业务任务时，才需要传 `--tasks my-tasks.jsonl`。
+可以用 `--list-suites` 查看内置测试集。接入自检用 `--suite connectivity-smoke`；只有当你要替换成业务任务时，才需要传 `--tasks my-tasks.jsonl`。
 
 如果你的 agent 输出带 `ADAHARNESS_EVENT ` 前缀的行，`capture` 会把它们记录成更详细的 harness events：
 

@@ -14,8 +14,10 @@ from adaharness.trace import TaskTrace, TraceRecorder
 
 EVENT_PREFIX = "ADAHARNESS_EVENT "
 BUILTIN_TASK_SUITES = {
-    "agent-smoke": "tasks/agent-smoke.jsonl",
+    "connectivity-smoke": "tasks/connectivity-smoke.jsonl",
+    "ifeval-lite": "tasks/ifeval-lite.jsonl",
 }
+DEFAULT_TASK_SUITE = "ifeval-lite"
 
 
 @dataclass(frozen=True)
@@ -39,6 +41,21 @@ class CaptureTask:
     def expected_regex(self) -> str | None:
         value = self.data.get("expected_regex")
         return None if value is None else str(value)
+
+    @property
+    def judges(self) -> tuple[dict[str, Any], ...]:
+        judge = self.data.get("judge")
+        if isinstance(judge, list):
+            return tuple(dict(item) for item in judge)
+        if isinstance(judge, dict):
+            return (dict(judge),)
+
+        judges = []
+        if self.expected_contains is not None:
+            judges.append({"type": "contains", "value": self.expected_contains})
+        if self.expected_regex is not None:
+            judges.append({"type": "regex", "pattern": self.expected_regex})
+        return tuple(judges)
 
     def format_command(self, command: list[str]) -> list[str]:
         return [_format_template(part, self.data) for part in command]
@@ -188,7 +205,8 @@ def _run_one_task(
             check=False,
         )
         latency_ms = (perf_counter() - started_at) * 1000
-        success, reason = _judge_success(task, completed.returncode, completed.stdout)
+        answer_output = _answer_output(completed.stdout, event_prefix)
+        success, reason = _judge_success(task, completed.returncode, answer_output)
         status = "success" if completed.returncode == 0 else "failed"
         model_fields = _output_fields(
             stdout=completed.stdout,
@@ -251,14 +269,45 @@ def _run_one_task(
 def _judge_success(task: CaptureTask, exit_code: int, stdout: str) -> tuple[bool, str | None]:
     if exit_code != 0:
         return False, f"exit_code_{exit_code}"
-    if task.expected_contains is not None:
-        if task.expected_contains in stdout:
-            return True, None
-        return False, "expected_contains_missing"
-    if task.expected_regex is not None:
-        if re.search(task.expected_regex, stdout):
-            return True, None
-        return False, "expected_regex_missing"
+    for judge in task.judges:
+        passed, reason = _judge_output(judge, stdout)
+        if not passed:
+            return False, reason
+    return True, None
+
+
+def _judge_output(judge: dict[str, Any], stdout: str) -> tuple[bool, str | None]:
+    judge_type = str(judge.get("type", "")).lower()
+    if judge_type == "contains":
+        value = str(judge.get("value", ""))
+        return (True, None) if value in stdout else (False, "contains_missing")
+    if judge_type == "not_contains":
+        value = str(judge.get("value", ""))
+        return (True, None) if value not in stdout else (False, "forbidden_text_present")
+    if judge_type == "regex":
+        pattern = str(judge.get("pattern", ""))
+        return (True, None) if re.search(pattern, stdout) else (False, "regex_missing")
+    if judge_type == "exact":
+        value = str(judge.get("value", ""))
+        return (True, None) if stdout.strip() == value else (False, "exact_mismatch")
+    if judge_type == "json_field":
+        return _judge_json_field(judge, stdout)
+    raise ValueError(f"unsupported judge type {judge_type!r}")
+
+
+def _judge_json_field(judge: dict[str, Any], stdout: str) -> tuple[bool, str | None]:
+    try:
+        data = json.loads(stdout.strip())
+    except json.JSONDecodeError:
+        return False, "invalid_json"
+    field = str(judge.get("field", ""))
+    if not field:
+        raise ValueError("json_field judge requires field")
+    if field not in data:
+        return False, "json_field_missing"
+    expected = judge.get("value")
+    if "value" in judge and data[field] != expected:
+        return False, "json_field_mismatch"
     return True, None
 
 
@@ -308,6 +357,11 @@ def _timeout_output(value: bytes | str | None) -> str:
     if isinstance(value, bytes):
         return value.decode("utf-8", errors="replace")
     return value
+
+
+def _answer_output(stdout: str, event_prefix: str) -> str:
+    lines = [line for line in stdout.splitlines() if not line.strip().startswith(event_prefix)]
+    return "\n".join(lines).strip()
 
 
 def _format_template(template: str, data: dict[str, Any]) -> str:

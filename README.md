@@ -85,7 +85,7 @@ uv run adaharness capture --help
 ```
 
 This creates `.adaharness/diagnostics/default.toml`, `.adaharness/policies/current-policy.json`,
-the built-in `agent-smoke` task suite, example traces, and a reports directory.
+built-in workload suites, example traces, and a reports directory.
 For real data, point `capture` at a single-task command that runs your agent:
 
 ```bash
@@ -111,9 +111,15 @@ adaharness analyze \
 
 The intended MVP flow is trace-first, but AdaHarness should help produce traces.
 It does not assume your project has an `agent eval` command or a prepared test
-set. The `capture` command ships with the `agent-smoke` suite and can run a
-normal single-task agent entrypoint for each task, judge simple expectations,
-and write AdaHarness traces.
+set. The `capture` command ships with built-in workload suites and can run a
+normal single-task agent entrypoint for each task, judge deterministic
+expectations, and write AdaHarness traces.
+
+Built-in suites:
+
+- `connectivity-smoke`: plumbing check only; use it to verify command wiring.
+- `ifeval-lite`: verifiable instruction-following workload inspired by IFEval-style
+  instruction constraints. It is not the official IFEval dataset.
 
 The built-in suite is plain JSONL like this, so users can replace it later:
 
@@ -129,8 +135,9 @@ adaharness capture \
   -- python your_agent.py --prompt "{prompt}"
 ```
 
-Use `--list-suites` to see bundled suites. Add `--tasks my-tasks.jsonl` only
-when you want to replace the built-in suite with project-specific tasks.
+Use `--list-suites` to see bundled suites. Add `--suite connectivity-smoke` for
+plumbing checks, or `--tasks my-tasks.jsonl` when you want to replace the built-in
+suite with project-specific tasks.
 
 If your agent prints lines prefixed with `ADAHARNESS_EVENT `, `capture` records
 those as detailed harness events:

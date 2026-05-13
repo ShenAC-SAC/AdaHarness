@@ -17,7 +17,13 @@ from adaharness.analysis import (
     render_analysis_report,
     validate_trace_events,
 )
-from adaharness.capture import BUILTIN_TASK_SUITES, capture_command_runs, load_builtin_capture_tasks, load_capture_tasks
+from adaharness.capture import (
+    BUILTIN_TASK_SUITES,
+    DEFAULT_TASK_SUITE,
+    capture_command_runs,
+    load_builtin_capture_tasks,
+    load_capture_tasks,
+)
 from adaharness.config import AdaHarnessConfig, load_config
 from adaharness.evals.runner import compare_harness_runs
 from adaharness.evals.task_schema import load_taskset
@@ -56,7 +62,8 @@ INIT_TEMPLATE_FILES = (
     ("README.md", "README.md"),
     ("diagnostics/default.toml", "diagnostics/default.toml"),
     ("policies/current-policy.json", "policies/current-policy.json"),
-    ("tasks/agent-smoke.jsonl", "tasks/agent-smoke.jsonl"),
+    ("tasks/connectivity-smoke.jsonl", "tasks/connectivity-smoke.jsonl"),
+    ("tasks/ifeval-lite.jsonl", "tasks/ifeval-lite.jsonl"),
     ("traces/overconstrained_harness.jsonl", "traces/overconstrained_harness.jsonl"),
     ("traces/undercontrolled_tool_use.jsonl", "traces/undercontrolled_tool_use.jsonl"),
 )
@@ -279,8 +286,8 @@ def cmd_init(args: argparse.Namespace) -> int:
     data = {
         "path": str(root),
         "purpose": (
-            "Starter files for running the built-in agent-smoke suite against your agent. "
-            "Bundled traces are only analyzer demos."
+            "Starter files for running built-in workload suites against your agent. "
+            "Use connectivity-smoke for plumbing and ifeval-lite for a first diagnostic workload."
         ),
         "created": created,
         "skipped": skipped,
@@ -360,7 +367,19 @@ def _run_analysis(
 
 def cmd_capture(args: argparse.Namespace) -> int:
     if args.list_suites:
-        print(json.dumps({"suites": sorted(BUILTIN_TASK_SUITES)}, indent=2))
+        print(
+            json.dumps(
+                {
+                    "default": DEFAULT_TASK_SUITE,
+                    "suites": sorted(BUILTIN_TASK_SUITES),
+                    "notes": {
+                        "connectivity-smoke": "Plumbing check only; not a diagnostic workload.",
+                        "ifeval-lite": "Verifiable instruction-following workload inspired by IFEval categories.",
+                    },
+                },
+                indent=2,
+            )
+        )
         return 0
 
     command = list(args.command)
@@ -370,7 +389,7 @@ def cmd_capture(args: argparse.Namespace) -> int:
         raise ValueError("capture requires an agent command after --")
     if args.tasks and args.suite:
         raise ValueError("capture accepts either --tasks or --suite, not both")
-    suite = args.suite or "agent-smoke"
+    suite = args.suite or DEFAULT_TASK_SUITE
     tasks = load_capture_tasks(Path(args.tasks)) if args.tasks else load_builtin_capture_tasks(suite)
     out_path = Path(args.out)
     summary = capture_command_runs(
@@ -662,7 +681,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--suite",
         choices=sorted(BUILTIN_TASK_SUITES),
         default=None,
-        help="Built-in task suite to run when --tasks is not provided",
+        help=f"Built-in task suite to run when --tasks is not provided. Default: {DEFAULT_TASK_SUITE}",
     )
     capture.add_argument("--list-suites", action="store_true", help="List built-in capture suites")
     capture.add_argument("--out", default=".adaharness/traces/run.jsonl")
