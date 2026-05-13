@@ -1,5 +1,7 @@
 # AdaHarness
 
+Language: [English](README.md) | [简体中文](README.zh-CN.md)
+
 Harness drift analyzer and calibration advisor for LLM agent projects.
 
 AdaHarness reads agent traces and eval results, detects whether the current
