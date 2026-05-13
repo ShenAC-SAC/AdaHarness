@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
+from importlib.resources import files
 import json
 from pathlib import Path
 import re
@@ -12,6 +13,9 @@ from adaharness.trace import TaskTrace, TraceRecorder
 
 
 EVENT_PREFIX = "ADAHARNESS_EVENT "
+BUILTIN_TASK_SUITES = {
+    "agent-smoke": "tasks/agent-smoke.jsonl",
+}
 
 
 @dataclass(frozen=True)
@@ -96,6 +100,23 @@ def load_capture_tasks(path: Path) -> tuple[CaptureTask, ...]:
             tasks.append(CaptureTask.from_dict(json.loads(stripped)))
         except json.JSONDecodeError as exc:
             raise ValueError(f"Invalid JSON in {path}:{line_number}") from exc
+    return tuple(tasks)
+
+
+def load_builtin_capture_tasks(name: str) -> tuple[CaptureTask, ...]:
+    if name not in BUILTIN_TASK_SUITES:
+        supported = ", ".join(sorted(BUILTIN_TASK_SUITES))
+        raise ValueError(f"unknown capture suite {name!r}. Expected one of: {supported}")
+    resource = files("adaharness.templates").joinpath(BUILTIN_TASK_SUITES[name])
+    tasks = []
+    for line_number, line in enumerate(resource.read_text(encoding="utf-8").splitlines(), start=1):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        try:
+            tasks.append(CaptureTask.from_dict(json.loads(stripped)))
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"Invalid JSON in built-in suite {name}:{line_number}") from exc
     return tuple(tasks)
 
 

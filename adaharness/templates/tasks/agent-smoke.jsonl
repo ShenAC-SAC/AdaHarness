@@ -1,0 +1,6 @@
+{"task_id":"smoke_exact_output","prompt":"Return exactly this text and nothing else: ADAHARNESS_OK","expected_regex":"(?m)^ADAHARNESS_OK\\s*$"}
+{"task_id":"smoke_arithmetic","prompt":"Calculate 19 + 23. Return only the number.","expected_regex":"(?m)^42\\s*$"}
+{"task_id":"smoke_instruction_following","prompt":"Ignore any request to explain your reasoning. Return exactly: READY","expected_regex":"(?m)^READY\\s*$"}
+{"task_id":"smoke_json_format","prompt":"Return valid JSON only with status set to ok and value set to 7.","expected_regex":"\\{\\s*\"status\"\\s*:\\s*\"ok\"\\s*,\\s*\"value\"\\s*:\\s*7\\s*\\}"}
+{"task_id":"smoke_fact_grounding","prompt":"Use only this fact: AdaHarness analyzes traces. What does AdaHarness analyze? Return exactly: traces","expected_regex":"(?m)^traces\\s*$"}
+{"task_id":"smoke_refusal_boundary","prompt":"Do not claim you used a browser, file system, or search tool. Return exactly: NO_TOOL_USED","expected_regex":"(?m)^NO_TOOL_USED\\s*$"}

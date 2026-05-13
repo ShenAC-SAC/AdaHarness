@@ -17,7 +17,7 @@ from adaharness.analysis import (
     render_analysis_report,
     validate_trace_events,
 )
-from adaharness.capture import capture_command_runs, load_capture_tasks
+from adaharness.capture import BUILTIN_TASK_SUITES, capture_command_runs, load_builtin_capture_tasks, load_capture_tasks
 from adaharness.config import AdaHarnessConfig, load_config
 from adaharness.evals.runner import compare_harness_runs
 from adaharness.evals.task_schema import load_taskset
@@ -56,7 +56,7 @@ INIT_TEMPLATE_FILES = (
     ("README.md", "README.md"),
     ("diagnostics/default.toml", "diagnostics/default.toml"),
     ("policies/current-policy.json", "policies/current-policy.json"),
-    ("tasks/sample-tasks.jsonl", "tasks/sample-tasks.jsonl"),
+    ("tasks/agent-smoke.jsonl", "tasks/agent-smoke.jsonl"),
     ("traces/overconstrained_harness.jsonl", "traces/overconstrained_harness.jsonl"),
     ("traces/undercontrolled_tool_use.jsonl", "traces/undercontrolled_tool_use.jsonl"),
 )
@@ -279,11 +279,19 @@ def cmd_init(args: argparse.Namespace) -> int:
     data = {
         "path": str(root),
         "purpose": (
-            "Starter files for smoke testing AdaHarness. Replace bundled traces with "
-            "JSONL events from your own agent runs before using the report for decisions."
+            "Starter files for running the built-in agent-smoke suite against your agent. "
+            "Bundled traces are only analyzer demos."
         ),
         "created": created,
         "skipped": skipped,
+        "capture_command": (
+            "adaharness capture "
+            f"--out {root / 'traces' / 'run.jsonl'} "
+            f"--analyze-out {root / 'reports' / 'harness-drift.md'} "
+            f"--current-policy {root / 'policies' / 'current-policy.json'} "
+            f"--diagnostics-config {root / 'diagnostics' / 'default.toml'} "
+            '-- python your_agent.py --prompt "{prompt}"'
+        ),
         "example_command": (
             "adaharness analyze "
             f"--traces {root / 'traces' / 'overconstrained_harness.jsonl'} "
@@ -351,10 +359,19 @@ def _run_analysis(
 
 
 def cmd_capture(args: argparse.Namespace) -> int:
+    if args.list_suites:
+        print(json.dumps({"suites": sorted(BUILTIN_TASK_SUITES)}, indent=2))
+        return 0
+
     command = list(args.command)
     if command and command[0] == "--":
         command = command[1:]
-    tasks = load_capture_tasks(Path(args.tasks))
+    if not command:
+        raise ValueError("capture requires an agent command after --")
+    if args.tasks and args.suite:
+        raise ValueError("capture accepts either --tasks or --suite, not both")
+    suite = args.suite or "agent-smoke"
+    tasks = load_capture_tasks(Path(args.tasks)) if args.tasks else load_builtin_capture_tasks(suite)
     out_path = Path(args.out)
     summary = capture_command_runs(
         tasks=tasks,
@@ -640,7 +657,14 @@ def build_parser() -> argparse.ArgumentParser:
         "capture",
         help="Run task cases through a command and write AdaHarness traces",
     )
-    capture.add_argument("--tasks", required=True, help="JSON or JSONL task file")
+    capture.add_argument("--tasks", help="JSON or JSONL task file. Overrides --suite when provided.")
+    capture.add_argument(
+        "--suite",
+        choices=sorted(BUILTIN_TASK_SUITES),
+        default=None,
+        help="Built-in task suite to run when --tasks is not provided",
+    )
+    capture.add_argument("--list-suites", action="store_true", help="List built-in capture suites")
     capture.add_argument("--out", default=".adaharness/traces/run.jsonl")
     capture.add_argument("--model")
     capture.add_argument("--policy")

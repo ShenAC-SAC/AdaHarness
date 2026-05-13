@@ -46,7 +46,7 @@ jobs:
           test -f runs/init/README.md
           test -f runs/init/diagnostics/default.toml
           test -f runs/init/policies/current-policy.json
-          test -f runs/init/tasks/sample-tasks.jsonl
+          test -f runs/init/tasks/agent-smoke.jsonl
           test -f runs/init/traces/overconstrained_harness.jsonl
 
       - name: Smoke test capture CLI
@@ -57,10 +57,20 @@ jobs:
 
           prompt = sys.argv[1]
           print("ADAHARNESS_EVENT " + json.dumps({"event": "verifier", "status": "pass", "cost": 0.001}))
-          print("OK" if prompt else "missing prompt")
+          if "19 + 23" in prompt:
+              print("42")
+          elif "valid JSON" in prompt:
+              print(json.dumps({"status": "ok", "value": 7}))
+          elif "analyzes traces" in prompt:
+              print("traces")
+          elif "NO_TOOL_USED" in prompt:
+              print("NO_TOOL_USED")
+          elif "READY" in prompt:
+              print("READY")
+          else:
+              print("ADAHARNESS_OK")
           PY
           uv run adaharness capture \
-            --tasks runs/init/tasks/sample-tasks.jsonl \
             --out runs/captured.jsonl \
             --analyze-out runs/captured-report.md \
             --current-policy runs/init/policies/current-policy.json \

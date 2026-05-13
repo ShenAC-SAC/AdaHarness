@@ -12,6 +12,16 @@ from adaharness.cli import main
 
 
 class CaptureCliTests(unittest.TestCase):
+    def test_capture_lists_builtin_suites(self) -> None:
+        output = StringIO()
+
+        with redirect_stdout(output):
+            exit_code = main(["capture", "--list-suites"])
+        data = json.loads(output.getvalue())
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn("agent-smoke", data["suites"])
+
     def test_capture_runs_command_tasks_and_writes_analyzable_trace(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
@@ -93,3 +103,54 @@ class CaptureCliTests(unittest.TestCase):
             self.assertEqual(metrics.final_count, 2)
             self.assertEqual(metrics.verifier_events, 2)
             self.assertEqual(metrics.success_rate, 0.5)
+
+    def test_capture_uses_builtin_suite_when_tasks_are_omitted(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            agent_path = root / "agent.py"
+            trace_path = root / "run.jsonl"
+            agent_path.write_text(
+                textwrap.dedent(
+                    """
+                    import json
+                    import sys
+
+                    prompt = sys.argv[1]
+                    if "19 + 23" in prompt:
+                        answer = "42"
+                    elif "valid JSON" in prompt:
+                        answer = json.dumps({"status": "ok", "value": 7})
+                    elif "traces" in prompt:
+                        answer = "traces"
+                    elif "NO_TOOL_USED" in prompt:
+                        answer = "NO_TOOL_USED"
+                    elif "READY" in prompt:
+                        answer = "READY"
+                    else:
+                        answer = "ADAHARNESS_OK"
+                    print(answer)
+                    """
+                ),
+                encoding="utf-8",
+            )
+
+            output = StringIO()
+            with redirect_stdout(output):
+                exit_code = main(
+                    [
+                        "capture",
+                        "--out",
+                        str(trace_path),
+                        "--",
+                        sys.executable,
+                        str(agent_path),
+                        "{prompt}",
+                    ]
+                )
+            summary = json.loads(output.getvalue())
+            metrics = compute_trace_metrics(load_trace_events([trace_path]))
+
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(summary["task_count"], 6)
+            self.assertEqual(summary["success_count"], 6)
+            self.assertEqual(metrics.success_rate, 1.0)

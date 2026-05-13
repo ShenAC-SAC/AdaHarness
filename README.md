@@ -70,13 +70,11 @@ adaharness init
 ```
 
 This creates `.adaharness/diagnostics/default.toml`, `.adaharness/policies/current-policy.json`,
-sample tasks, example traces, and a reports directory. The bundled traces are an
-installation smoke test, not a real diagnosis of your agent project. For real
-data, point `capture` at a single-task command that runs your agent:
+the built-in `agent-smoke` task suite, example traces, and a reports directory.
+For real data, point `capture` at a single-task command that runs your agent:
 
 ```bash
 adaharness capture \
-  --tasks .adaharness/tasks/sample-tasks.jsonl \
   --out .adaharness/traces/run.jsonl \
   --analyze-out .adaharness/reports/harness-drift.md \
   --current-policy .adaharness/policies/current-policy.json \
@@ -97,11 +95,12 @@ adaharness analyze \
 ## MVP Usage
 
 The intended MVP flow is trace-first, but AdaHarness should help produce traces.
-It does not assume your project has an `agent eval` command. The `capture`
-command can run a normal single-task agent entrypoint for each task in a JSONL
-task file, judge simple expectations, and write AdaHarness traces.
+It does not assume your project has an `agent eval` command or a prepared test
+set. The `capture` command ships with the `agent-smoke` suite and can run a
+normal single-task agent entrypoint for each task, judge simple expectations,
+and write AdaHarness traces.
 
-Task file:
+The built-in suite is plain JSONL like this, so users can replace it later:
 
 ```json
 {"task_id":"t1","prompt":"Answer with OK.","expected_contains":"OK"}
@@ -111,10 +110,12 @@ Capture command:
 
 ```bash
 adaharness capture \
-  --tasks .adaharness/tasks/sample-tasks.jsonl \
   --out .adaharness/traces/run.jsonl \
   -- python your_agent.py --prompt "{prompt}"
 ```
+
+Use `--list-suites` to see bundled suites. Add `--tasks my-tasks.jsonl` only
+when you want to replace the built-in suite with project-specific tasks.
 
 If your agent prints lines prefixed with `ADAHARNESS_EVENT `, `capture` records
 those as detailed harness events:

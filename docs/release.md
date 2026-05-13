@@ -36,10 +36,27 @@ Smoke test the built wheel in a clean virtual environment:
 python -m venv /tmp/adaharness-wheel-test
 /tmp/adaharness-wheel-test/bin/pip install dist/adaharness-*.whl
 /tmp/adaharness-wheel-test/bin/adaharness init --path /tmp/adaharness-wheel-test/project/.adaharness
+cat > /tmp/adaharness-wheel-test/project/fake_agent.py <<'PY'
+import json
+import sys
+
+prompt = sys.argv[1]
+if "19 + 23" in prompt:
+    print("42")
+elif "valid JSON" in prompt:
+    print(json.dumps({"status": "ok", "value": 7}))
+elif "analyzes traces" in prompt:
+    print("traces")
+elif "NO_TOOL_USED" in prompt:
+    print("NO_TOOL_USED")
+elif "READY" in prompt:
+    print("READY")
+else:
+    print("ADAHARNESS_OK")
+PY
 /tmp/adaharness-wheel-test/bin/adaharness capture \
-  --tasks /tmp/adaharness-wheel-test/project/.adaharness/tasks/sample-tasks.jsonl \
   --out /tmp/adaharness-wheel-test/project/.adaharness/traces/run.jsonl \
-  -- python -c 'import sys; print("OK")'
+  -- /tmp/adaharness-wheel-test/bin/python /tmp/adaharness-wheel-test/project/fake_agent.py "{prompt}"
 /tmp/adaharness-wheel-test/bin/adaharness analyze \
   --traces /tmp/adaharness-wheel-test/project/.adaharness/traces/run.jsonl \
   --current-policy /tmp/adaharness-wheel-test/project/.adaharness/policies/current-policy.json \
