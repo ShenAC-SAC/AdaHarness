@@ -37,13 +37,24 @@ jobs:
       - name: Run lint
         run: uv run ruff check .
 
+      - name: Build package
+        run: uv build
+
+      - name: Smoke test init CLI
+        run: |
+          uv run adaharness init --path runs/init
+          test -f runs/init/README.md
+          test -f runs/init/diagnostics/default.toml
+          test -f runs/init/policies/current-policy.json
+          test -f runs/init/traces/overconstrained_harness.jsonl
+
       - name: Smoke test analyze CLI
         run: |
           mkdir -p runs
           uv run adaharness analyze \
-            --traces examples/traces/overconstrained_harness.jsonl \
-            --current-policy examples/policies/heavy_policy.json \
-            --diagnostics-config examples/diagnostics/default.toml \
+            --traces runs/init/traces/overconstrained_harness.jsonl \
+            --current-policy runs/init/policies/current-policy.json \
+            --diagnostics-config runs/init/diagnostics/default.toml \
             --out runs/harness-drift.md
           test -f runs/harness-drift.md
           test -f runs/harness-drift.analysis.json

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import importlib
+from importlib.resources import files
 import json
 from pathlib import Path
 import sys
@@ -48,6 +49,15 @@ from adaharness.runtime.budget import Budget
 from adaharness.runtime.results import RunResult
 from adaharness.specs import compile_policy_to_spec
 from adaharness.specs.harness_spec import HarnessSpec
+
+
+INIT_TEMPLATE_FILES = (
+    ("README.md", "README.md"),
+    ("diagnostics/default.toml", "diagnostics/default.toml"),
+    ("policies/current-policy.json", "policies/current-policy.json"),
+    ("traces/overconstrained_harness.jsonl", "traces/overconstrained_harness.jsonl"),
+    ("traces/undercontrolled_tool_use.jsonl", "traces/undercontrolled_tool_use.jsonl"),
+)
 
 
 def _write_json(path: Path, data: dict[str, Any]) -> None:
@@ -245,6 +255,39 @@ def _write_analysis_sidecars(
         },
     )
     _write_json(report_path.with_suffix(".policy-diff.json"), {"changes": policy_diff})
+
+
+def cmd_init(args: argparse.Namespace) -> int:
+    root = Path(args.path)
+    created: list[str] = []
+    skipped: list[str] = []
+    template_root = files("adaharness.templates")
+    for source_name, target_name in INIT_TEMPLATE_FILES:
+        target = root / target_name
+        if target.exists() and not args.force:
+            skipped.append(str(target))
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        content = template_root.joinpath(source_name).read_text(encoding="utf-8")
+        target.write_text(content, encoding="utf-8")
+        created.append(str(target))
+
+    reports_dir = root / "reports"
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    data = {
+        "path": str(root),
+        "created": created,
+        "skipped": skipped,
+        "example_command": (
+            "adaharness analyze "
+            f"--traces {root / 'traces' / 'overconstrained_harness.jsonl'} "
+            f"--current-policy {root / 'policies' / 'current-policy.json'} "
+            f"--diagnostics-config {root / 'diagnostics' / 'default.toml'} "
+            f"--out {root / 'reports' / 'harness-drift.md'}"
+        ),
+    }
+    print(json.dumps(data, indent=2))
+    return 0
 
 
 def cmd_analyze(args: argparse.Namespace) -> int:
@@ -528,6 +571,11 @@ def _failure_reason_lines(runs: list[dict[str, Any]], model_name: str | None = N
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="adaharness")
     subparsers = parser.add_subparsers(dest="command", required=True)
+
+    init = subparsers.add_parser("init", help="Create starter AdaHarness project files")
+    init.add_argument("--path", default=".adaharness")
+    init.add_argument("--force", action="store_true", help="Overwrite existing starter files")
+    init.set_defaults(func=cmd_init)
 
     analyze = subparsers.add_parser("analyze", help="Analyze exported agent traces")
     analyze.add_argument("--traces", nargs="+", required=True)

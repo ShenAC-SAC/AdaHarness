@@ -50,8 +50,34 @@ traces -> metrics -> diagnosis -> suggested policy diff -> report
 
 ## Install
 
+From a release package:
+
+```bash
+uv tool install adaharness
+# or: pipx install adaharness
+```
+
+For local development:
+
 ```bash
 uv sync --group dev
+```
+
+After installation, create starter files in your agent project:
+
+```bash
+adaharness init
+```
+
+This creates `.adaharness/diagnostics/default.toml`, `.adaharness/policies/current-policy.json`,
+example traces, and a reports directory. You can immediately run:
+
+```bash
+adaharness analyze \
+  --traces .adaharness/traces/overconstrained_harness.jsonl \
+  --current-policy .adaharness/policies/current-policy.json \
+  --diagnostics-config .adaharness/diagnostics/default.toml \
+  --out .adaharness/reports/harness-drift.md
 ```
 
 ## MVP Usage
@@ -163,7 +189,8 @@ Older commands such as `profile`, `compare`, `recommend`, `assemble`,
 tests. They are not the main MVP path.
 
 See `docs/metrics.md`, `docs/architecture.md`, `docs/roadmap.md`,
-`docs/use-cases.md`, and `docs/experimental.md` for the current boundary.
+`docs/use-cases.md`, `docs/experimental.md`, and `docs/release.md` for the
+current boundary and release checklist.
 
 ## Why
 

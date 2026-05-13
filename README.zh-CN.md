@@ -39,8 +39,33 @@ traces -> metrics -> diagnosis -> suggested policy diff -> report
 
 ## 安装
 
+从 release package 安装：
+
+```bash
+uv tool install adaharness
+# 或：pipx install adaharness
+```
+
+本地开发：
+
 ```bash
 uv sync --group dev
+```
+
+安装后，在你的 agent 项目中创建起步文件：
+
+```bash
+adaharness init
+```
+
+这会生成 `.adaharness/diagnostics/default.toml`、`.adaharness/policies/current-policy.json`、示例 traces 和 reports 目录。随后可以直接运行：
+
+```bash
+adaharness analyze \
+  --traces .adaharness/traces/overconstrained_harness.jsonl \
+  --current-policy .adaharness/policies/current-policy.json \
+  --diagnostics-config .adaharness/diagnostics/default.toml \
+  --out .adaharness/reports/harness-drift.md
 ```
 
 ## MVP 用法
@@ -137,7 +162,7 @@ runs/harness-drift.policy-diff.json
 
 旧命令如 `profile`、`compare`、`recommend`、`assemble`、`calibrate` 和 reference `run` 仍然可用于实验和 smoke tests，但它们不是当前 MVP 主路径。
 
-当前边界见 `docs/metrics.md`、`docs/architecture.md`、`docs/roadmap.md`、`docs/use-cases.md` 和 `docs/experimental.md`。
+当前边界和 release checklist 见 `docs/metrics.md`、`docs/architecture.md`、`docs/roadmap.md`、`docs/use-cases.md`、`docs/experimental.md` 和 `docs/release.md`。
 
 ## 为什么需要 AdaHarness
 
