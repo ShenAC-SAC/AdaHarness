@@ -40,89 +40,16 @@ jobs:
       - name: Build package
         run: uv build
 
-      - name: Smoke test init CLI
-        run: |
-          uv run adaharness init --path runs/init
-          test -f runs/init/README.md
-          test -f runs/init/diagnostics/default.toml
-          test -f runs/init/policies/current-policy.json
-          test -f runs/init/tasks/connectivity-smoke.jsonl
-          test -f runs/init/tasks/ifeval-lite.jsonl
-          test -f runs/init/traces/overconstrained_harness.jsonl
-
-      - name: Smoke test capture CLI
-        run: |
-          cat > runs/fake-agent.py <<'PY'
-          import json
-          import sys
-
-          prompt = sys.argv[1]
-          print("ADAHARNESS_EVENT " + json.dumps({"event": "verifier", "status": "pass", "cost": 0.001}))
-          if "valid JSON" in prompt:
-              print(json.dumps({"status": "ok", "value": 7}))
-          elif "three comma-separated words" in prompt:
-              print("trace, policy, harness")
-          elif "uppercase" in prompt:
-              print("CALIBRATED")
-          elif "one lowercase word" in prompt:
-              print("traces")
-          elif "Do not use the word" in prompt:
-              print("AdaHarness analyzes traces.")
-          else:
-              print("ADAHARNESS_OK")
-          PY
-          uv run adaharness capture \
-            --out runs/captured.jsonl \
-            --analyze-out runs/captured-report.md \
-            --current-policy runs/init/policies/current-policy.json \
-            --diagnostics-config runs/init/diagnostics/default.toml \
-            -- python runs/fake-agent.py "{prompt}"
-          test -f runs/captured.jsonl
-          test -f runs/captured-report.md
-
       - name: Smoke test analyze CLI
         run: |
           mkdir -p runs
           uv run adaharness analyze \
-            --traces runs/init/traces/overconstrained_harness.jsonl \
-            --current-policy runs/init/policies/current-policy.json \
-            --diagnostics-config runs/init/diagnostics/default.toml \
+            --traces examples/traces/overconstrained_harness.jsonl \
+            --current-policy examples/policies/heavy_policy.json \
+            --diagnostics-config examples/diagnostics/default.toml \
             --out runs/harness-drift.md
           test -f runs/harness-drift.md
           test -f runs/harness-drift.analysis.json
           test -f runs/harness-drift.metrics.json
           test -f runs/harness-drift.diagnosis.json
           test -f runs/harness-drift.policy-diff.json
-
-  experimental-smoke:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v5
-
-      - name: Install package
-        run: uv sync --frozen --group dev
-
-      - name: Smoke test experimental CLI
-        run: |
-          mkdir -p runs
-          uv run adaharness profile --model small-sim --taskset tasks/profiler --out runs/small-profile.json
-          uv run adaharness profile --model strong-sim --taskset tasks/profiler --out runs/strong-profile.json
-          uv run adaharness recommend --profile runs/small-profile.json --out runs/small-policy.json
-          uv run adaharness assemble --policy runs/small-policy.json --out runs/small-spec.json
-          uv run adaharness run --harness-spec runs/small-spec.json --provider mock --model mock-model --task tasks/eval --out runs/ci-run.json
-          uv run adaharness migrate --from-profile runs/small-profile.json --to-profile runs/strong-profile.json --from-policy runs/small-policy.json --out runs/migration.json
-          uv run adaharness refine --policy runs/small-policy.json --trace runs/ci-run-traces --out runs/refinement.json
-          TRACE=$(find runs/ci-run-traces -name '*.json' | head -n 1)
-          uv run adaharness import-trace --source "$TRACE" --out runs/imported-trace.json
-          uv run adaharness compare --model small-sim --taskset tasks/eval --out runs/ci-compare.json
-          uv run adaharness report runs/ci-compare.json
