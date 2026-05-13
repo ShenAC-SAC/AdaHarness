@@ -1,6 +1,0 @@
-{
-  "planning_control": "explicit",
-  "verification_control": "always",
-  "retry_control": "aggressive",
-  "tool_control": "moderate"
-}

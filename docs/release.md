@@ -1,7 +1,8 @@
 # Release Checklist
 
-AdaHarness is designed to be usable after package installation. Before a PyPI
-release is published, install the current main branch with:
+AdaHarness should be installable as a lightweight trace analyzer.
+
+Install the current main branch with:
 
 ```bash
 uv tool install git+https://github.com/ShenAC-SAC/AdaHarness.git
@@ -11,12 +12,11 @@ After a tagged PyPI release is published:
 
 ```bash
 uv tool install adaharness
-adaharness init
 adaharness analyze \
-  --traces .adaharness/traces/overconstrained_harness.jsonl \
-  --current-policy .adaharness/policies/current-policy.json \
-  --diagnostics-config .adaharness/diagnostics/default.toml \
-  --out .adaharness/reports/harness-drift.md
+  --traces examples/traces/overconstrained_harness.jsonl \
+  --current-policy examples/policies/heavy_policy.json \
+  --diagnostics-config examples/diagnostics/default.toml \
+  --out runs/harness-drift.md
 ```
 
 ## Pre-Release Checks
@@ -31,10 +31,10 @@ uv lock --check
 uv build
 ```
 
-Verify the wheel contains starter templates:
+Verify the wheel contains the trace-first package surface:
 
 ```bash
-python -m zipfile -l dist/adaharness-*.whl | rg "adaharness/templates"
+python -m zipfile -l dist/adaharness-*.whl | rg "adaharness/(analysis|trace|api.py|cli.py)"
 ```
 
 Smoke test the built wheel in a clean virtual environment:
@@ -42,33 +42,17 @@ Smoke test the built wheel in a clean virtual environment:
 ```bash
 python -m venv /tmp/adaharness-wheel-test
 /tmp/adaharness-wheel-test/bin/pip install dist/adaharness-*.whl
-/tmp/adaharness-wheel-test/bin/adaharness init --path /tmp/adaharness-wheel-test/project/.adaharness
-cat > /tmp/adaharness-wheel-test/project/fake_agent.py <<'PY'
-import json
-import sys
-
-prompt = sys.argv[1]
-if "valid JSON" in prompt:
-    print(json.dumps({"status": "ok", "value": 7}))
-elif "three comma-separated words" in prompt:
-    print("trace, policy, harness")
-elif "uppercase" in prompt:
-    print("CALIBRATED")
-elif "one lowercase word" in prompt:
-    print("traces")
-elif "Do not use the word" in prompt:
-    print("AdaHarness analyzes traces.")
-else:
-    print("ADAHARNESS_OK")
-PY
-/tmp/adaharness-wheel-test/bin/adaharness capture \
-  --out /tmp/adaharness-wheel-test/project/.adaharness/traces/run.jsonl \
-  -- /tmp/adaharness-wheel-test/bin/python /tmp/adaharness-wheel-test/project/fake_agent.py "{prompt}"
+cat > /tmp/adaharness-wheel-test/trace.jsonl <<'JSONL'
+{"task_id":"t1","event":"verifier","status":"pass","cost":0.01}
+{"task_id":"t1","event":"final","success":true,"cost":0.02}
+JSONL
+cat > /tmp/adaharness-wheel-test/policy.json <<'JSON'
+{"verification_control":"always"}
+JSON
 /tmp/adaharness-wheel-test/bin/adaharness analyze \
-  --traces /tmp/adaharness-wheel-test/project/.adaharness/traces/run.jsonl \
-  --current-policy /tmp/adaharness-wheel-test/project/.adaharness/policies/current-policy.json \
-  --diagnostics-config /tmp/adaharness-wheel-test/project/.adaharness/diagnostics/default.toml \
-  --out /tmp/adaharness-wheel-test/project/.adaharness/reports/harness-drift.md
+  --traces /tmp/adaharness-wheel-test/trace.jsonl \
+  --current-policy /tmp/adaharness-wheel-test/policy.json \
+  --out /tmp/adaharness-wheel-test/harness-drift.md
 ```
 
 ## Publish

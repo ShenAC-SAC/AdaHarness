@@ -9,6 +9,19 @@ from adaharness.cli import main
 
 
 class AnalyzeCliTests(unittest.TestCase):
+    def test_help_exposes_only_analyze_command(self) -> None:
+        output = StringIO()
+
+        with self.assertRaises(SystemExit) as context:
+            with redirect_stdout(output):
+                main(["--help"])
+
+        self.assertEqual(context.exception.code, 0)
+        help_text = output.getvalue()
+        self.assertIn("{analyze}", help_text)
+        self.assertNotIn("capture", help_text)
+        self.assertNotIn("calibrate", help_text)
+
     def test_analyze_writes_report_and_sidecars(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)

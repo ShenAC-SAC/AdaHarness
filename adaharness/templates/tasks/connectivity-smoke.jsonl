@@ -1,2 +1,0 @@
-{"task_id":"connectivity_exact_output","prompt":"Return exactly this text and nothing else: ADAHARNESS_OK","judge":{"type":"exact","value":"ADAHARNESS_OK"},"metadata":{"suite":"connectivity-smoke","purpose":"plumbing_check"}}
-{"task_id":"connectivity_prompt_substitution","prompt":"Return exactly this text and nothing else: READY","judge":{"type":"exact","value":"READY"},"metadata":{"suite":"connectivity-smoke","purpose":"plumbing_check"}}

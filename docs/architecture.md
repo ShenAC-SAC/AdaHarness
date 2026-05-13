@@ -1,47 +1,67 @@
 # Architecture
 
-AdaHarness is being reduced to a trace-first harness drift analyzer. The MVP
-does not control the user's runtime. It reads traces or eval results from an
-existing agent project, computes harness metrics, diagnoses overconstraint or
-underconstraint, and suggests policy diffs.
+AdaHarness is a trace-first harness drift analyzer. It does not control the
+user's runtime. It reads traces from an existing agent project, computes harness
+metrics, diagnoses overconstraint or underconstraint, and suggests policy diffs.
 
-The MVP flow is:
+The maintained flow is:
 
 ```text
-TraceRecorder / Trace JSONL -> TraceValidation -> TraceMetrics -> HarnessDiagnosis -> PolicyDiff -> Report
+TraceRecorder / JSONL traces
+-> TraceValidation
+-> TraceMetrics
+-> HarnessDiagnosis
+-> PolicyDiff
+-> Report
 ```
 
-With `--out`, the CLI also writes a combined `analysis.json` artifact for CI and
-tooling.
-
-This keeps integration light: users can export logs without adopting AdaHarness
-modules, adapters, or runtime hooks.
+With `--out`, the CLI writes a Markdown report plus structured sidecars for CI
+and dashboards.
 
 ## Package Boundaries
 
-- `adaharness/analysis/` owns trace ingestion, metrics, diagnosis, policy diff
-  recommendation, and report rendering.
+- `adaharness/analysis/` owns trace ingestion, validation, metrics, diagnosis,
+  policy diff recommendation, and report rendering.
 - `adaharness/trace/` owns optional JSONL recording helpers for host projects.
   It writes events only; it must not mutate or control the host runtime.
-- `adaharness/integrations/` normalizes richer external trace formats into
-  AdaHarness-compatible traces.
-- `adaharness/policies/` keeps policy schemas and diff helpers used by reports.
-- `adaharness/cli.py` should make `analyze` the main MVP command.
-- `adaharness/project/`, `adaharness/adapters/`, `adaharness/specs/`,
-  `adaharness/modules/`, and `adaharness/harnesses/` are experimental
-  scaffolding from the earlier control-layer direction.
+- `adaharness/api.py` exposes a small `analyze_traces(...)` API for code users.
+- `adaharness/cli.py` exposes `adaharness analyze`.
+
+Removed runtime-control layers such as adapters, model clients, profilers,
+reference harnesses, compiled specs, and project calibration are not part of the
+MVP.
 
 ## Trace Contract
 
-The first trace contract should be simple JSONL. Each line is one event:
+The trace contract is simple JSONL. Each line is one event:
 
 ```json
+{"task_id":"t1","event":"planner","latency_ms":320}
 {"task_id":"t1","event":"verifier","status":"pass","cost":0.002}
 {"task_id":"t1","event":"retry","reason":"tool_failure"}
 {"task_id":"t1","event":"final","success":true,"cost":0.012,"latency_ms":2200}
 ```
 
-AdaHarness should prefer observable metrics over abstract model scores:
+Required fields:
+
+- `task_id`
+- `event`
+
+Important optional fields:
+
+- `status`
+- `success`
+- `cost`
+- `latency_ms`
+- `tokens`
+- `model`
+- `policy`
+- `control`
+- `reason`
+
+## Metrics and Diagnostics
+
+AdaHarness prefers observable trace evidence over abstract model scores:
 
 - verifier catch rate
 - verifier cost share
@@ -49,21 +69,8 @@ AdaHarness should prefer observable metrics over abstract model scores:
 - planner latency share
 - tool failure rate
 - tool result ignored rate
-- success, cost, and latency deltas
+- success, cost, and latency evidence
 
-Diagnostic rules are configurable heuristics. The analyzer should report the
-rule threshold, observed evidence, evidence count, confidence, and missing-data
-warnings rather than presenting a threshold as benchmark truth.
-
-## Experimental Layers
-
-The earlier control-layer architecture remains useful as a future direction, but
-it should not define the MVP:
-
-```text
-HarnessPolicy -> HarnessSpec -> RuntimeBinding -> runtime hooks
-```
-
-Those layers can become valuable after trace-based diagnostics prove that
-AdaHarness can give recommendations users trust. Until then, they should stay
-out of the primary user path.
+Diagnostic rules are configurable heuristics. Reports include rule thresholds,
+observed values, evidence counts, confidence, and trace quality warnings so
+recommendations stay auditable.

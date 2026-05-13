@@ -23,20 +23,12 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Topic :: Software Development :: Testing",
 ]
-dependencies = [
-  "tomli>=2.0; python_version < '3.11'",
-]
+dependencies = ["tomli>=2.0; python_version < '3.11'"]
 
 [project.urls]
 Homepage = "https://github.com/ShenAC-SAC/AdaHarness"
 Repository = "https://github.com/ShenAC-SAC/AdaHarness"
 Issues = "https://github.com/ShenAC-SAC/AdaHarness/issues"
-
-[project.optional-dependencies]
-openai = ["openai>=1.0"]
-anthropic = ["anthropic>=0.40"]
-local = ["requests>=2.31"]
-all = ["openai>=1.0", "anthropic>=0.40", "requests>=2.31"]
 
 [dependency-groups]
 dev = ["pytest>=8.0", "ruff>=0.8"]

@@ -1,7 +1,0 @@
-{
-  "id": "tool_use_001",
-  "category": "tool_use",
-  "prompt": "Use the calculator tool to compute a result, then explain it briefly without inventing tool output.",
-  "difficulty": 0.58,
-  "target_capability": "tool_use"
-}

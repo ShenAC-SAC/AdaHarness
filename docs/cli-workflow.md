@@ -1,8 +1,8 @@
 # CLI Workflow
 
-The MVP CLI is an analysis tool for traces exported by an existing agent
-project. It should not be the production agent runner and should not require the
-project to adopt AdaHarness runtime modules.
+The CLI is an analysis tool for traces exported by an existing agent project. It
+does not run the production agent and does not require AdaHarness runtime
+modules.
 
 ## Primary Path
 
@@ -51,9 +51,3 @@ min_events = 20
 max_catch_rate = 0.05
 min_cost_share = 0.20
 ```
-
-## Experimental Commands
-
-Existing commands such as `profile`, `compare`, `assemble`, `calibrate`, and
-reference `run` remain useful for experiments and CI smoke tests. They are not
-the main MVP path.

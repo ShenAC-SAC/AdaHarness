@@ -1,100 +1,67 @@
 # Roadmap
 
-AdaHarness is now centered on a lighter MVP:
+AdaHarness is centered on a lightweight MVP:
 
 ```text
-Agent traces -> harness metrics -> diagnosis -> suggested policy diff -> report
+agent traces -> harness metrics -> diagnosis -> suggested policy diff -> report
 ```
 
-The CLI should analyze exported traces first:
-
-```text
-analyze -> diagnose -> recommend diff -> report
-```
-
-Policy compilers, runtime bindings, project adapters, and `ModularHarness`
-remain experimental scaffolding. They are not the MVP product boundary.
+The project is intentionally not a runtime, model profiler, harness builder, or
+policy compiler.
 
 ## Completed Foundation
 
-- Harness policy, controller spec, binding, project adapter, and reference
-  runtime scaffolding.
-- Generic external trace normalization.
-- Migration and policy-diff prototypes.
-- Trace analyzer that writes metrics, diagnosis, policy diff, and combined
-  structured output.
-- Trace validation warnings, diagnostic confidence, and configurable diagnostic
-  thresholds.
-- Minimal `TraceRecorder` SDK for host projects that want a small JSONL writer.
+- Load JSONL traces from one or more files.
+- Validate missing finals, duplicate finals, unknown events, and missing cost or
+  latency evidence.
+- Compute verifier, planner, retry, tool-use, cost, latency, and success metrics.
+- Diagnose overconstraint and underconstraint signals.
+- Attach evidence, confidence, evidence counts, and rule thresholds to
+  diagnostics.
+- Recommend advisory policy diffs from signals.
+- Render Markdown reports and structured JSON sidecars.
+- Provide a minimal `TraceRecorder` SDK that only writes JSONL events.
 
-## Phase 1 Trace Ingestion
+## Phase 1: Better Trace Ergonomics
 
-Goal: make AdaHarness useful without runtime integration.
+Goal: make trace export easy without runtime integration.
 
-- Define a small JSONL trace event format.
-- Load traces from one or more files.
-- Validate canonical events, missing finals, duplicate finals, and missing cost
-  or latency evidence.
-- Accept traces exported by user projects without requiring adapters.
+- Improve trace format docs and examples.
+- Add more validation messages for common malformed traces.
+- Add examples for direct JSONL export and `TraceRecorder`.
 
-Acceptance: `adaharness analyze --traces traces.jsonl` can load events and
-produce a basic metrics object.
+Acceptance: a user can add useful traces to an existing agent project without
+writing an adapter or using AdaHarness to launch the agent.
 
-## Phase 2 Harness Diagnostics
+## Phase 2: Model Migration Reports
 
-Goal: diagnose over-control and under-control from observable signals.
+Goal: compare old and new traces after an LLM change.
 
-- Compute verifier catch rate, verifier cost share, retry success rate, retry
-  waste rate, planner latency share, tool failure rate, and success rate.
-- Add explicit overconstraint and underconstraint signals.
-- Include evidence lines, confidence, evidence counts, and rule thresholds for
-  every diagnosis.
-
-Acceptance: the report can explain why a harness looks too heavy, too weak, or
-roughly appropriate.
-
-## Phase 3 Policy Diff Recommendation
-
-Goal: suggest changes without controlling the user's runtime.
-
-- Load an optional current policy JSON.
-- Recommend changes such as `always -> selective`, `explicit -> light`, or
-  `aggressive -> bounded`.
-- Attach a reason and evidence to every suggested change.
-
-Acceptance: `analyze` writes `analysis.json`, `policy_diff.json`, and a
-human-readable report.
-
-## Phase 4 Migration Report
-
-Goal: compare old and new traces after model, prompt, tool, or task changes.
-
-- Accept `--baseline-traces` and `--candidate-traces`.
+- Accept baseline and candidate trace sets.
 - Report drift in success, cost, latency, verifier usefulness, retry usefulness,
   and tool failure behavior.
-- Recommend whether the current harness should be weakened, strengthened, or
-  left unchanged.
+- Recommend whether controls should be weakened, strengthened, or left alone.
 
-Acceptance: migration reports explain whether the old harness still fits the new
-system behavior.
+Acceptance: reports explain whether the old harness still fits the new model.
 
-## Phase 5 Minimal Trace SDK
+## Phase 3: Stronger Policy Diff Semantics
 
-Goal: reduce integration friction further.
+Goal: make recommendations easier to act on without becoming a runtime.
 
-- Add a small `TraceRecorder` helper for agent projects. Completed.
-- Keep it optional; users can still export JSONL manually. Completed.
-- Do not add runtime control or hook mutation. Completed.
+- Document the lightweight policy vocabulary.
+- Preserve current policy fields even when only one control changes.
+- Include before/after policy JSON as an optional artifact.
 
-Acceptance: a host project can record AdaHarness-compatible traces in a few
-lines of code.
+Acceptance: users can map AdaHarness advice back to their own harness config.
 
-## Experimental
+## Explicit Non-Roadmap
 
-These pieces remain in the codebase but are not the MVP path:
+The following are not planned for the MVP:
 
-- `ProjectAgentAdapter`
-- `RuntimeBinding`
-- `HarnessSpec` compiler
-- reference `ModularHarness`
-- online adaptation and controller binding
+- running user agent commands
+- built-in workload suites
+- model provider clients
+- deterministic model profilers
+- project adapters
+- reference harness runtime
+- policy-to-runtime compilers

@@ -69,6 +69,6 @@ when harness drift or underconstraint risk crosses explicit thresholds.
 ## Non-Goals for MVP
 
 - Do not control the user's runtime.
-- Do not require users to implement adapter hooks.
+- Do not require users to implement AdaHarness adapter hooks.
 - Do not rely on abstract model capability scores as the primary evidence.
-- Do not require the reference runtime for user value.
+- Do not ship a reference runtime as part of the MVP.
