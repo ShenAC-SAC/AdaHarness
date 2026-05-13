@@ -8,7 +8,7 @@ underconstraint, and suggests policy diffs.
 The MVP flow is:
 
 ```text
-Trace JSONL -> TraceValidation -> TraceMetrics -> HarnessDiagnosis -> PolicyDiff -> Report
+TraceRecorder / Trace JSONL -> TraceValidation -> TraceMetrics -> HarnessDiagnosis -> PolicyDiff -> Report
 ```
 
 With `--out`, the CLI also writes a combined `analysis.json` artifact for CI and
@@ -21,6 +21,8 @@ modules, adapters, or runtime hooks.
 
 - `adaharness/analysis/` owns trace ingestion, metrics, diagnosis, policy diff
   recommendation, and report rendering.
+- `adaharness/trace/` owns optional JSONL recording helpers for host projects.
+  It writes events only; it must not mutate or control the host runtime.
 - `adaharness/integrations/` normalizes richer external trace formats into
   AdaHarness-compatible traces.
 - `adaharness/policies/` keeps policy schemas and diff helpers used by reports.

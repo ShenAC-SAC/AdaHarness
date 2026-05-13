@@ -25,7 +25,7 @@ AdaHarness 读取 agent traces 和 eval results，判断当前 harness 对模型
 - 诊断 overconstraint 和 underconstraint
 - 基于 trace evidence 输出 suggested policy diff
 - 支持后续 model migration 和 harness drift report
-- 未来提供轻量 TraceRecorder SDK
+- 为用户项目提供轻量 TraceRecorder SDK
 
 ## 当前状态
 
@@ -77,7 +77,7 @@ AdaHarness 不连接你的工具，也不执行你的 runtime。它只需要你�
 接入方式可以有三种：
 
 - 在项目中直接写 JSONL events。
-- 未来使用轻量 `TraceRecorder` helper 写出同样的 JSONL 格式。
+- 使用 `TraceRecorder` 写出同样的 JSONL 格式。
 - 把已有日志或 observability exports 转成 AdaHarness trace events。
 
 例如，用户项目里的一次 tool call 可以记录为：
@@ -87,6 +87,29 @@ AdaHarness 不连接你的工具，也不执行你的 runtime。它只需要你�
 ```
 
 AdaHarness 会分析这条 event，但不会运行 `search_docs`。
+
+使用 recorder：
+
+```python
+from adaharness.trace import TraceRecorder
+
+trace = TraceRecorder(".adaharness/traces/run.jsonl", model="gpt-example", policy="current")
+task = trace.task("support_001")
+
+task.planner(latency_ms=320)
+task.tool_call(tool="search_docs", status="success", latency_ms=180)
+task.verifier(status="pass", cost=0.002)
+task.final(success=True, cost=0.012, latency_ms=2200)
+```
+
+如果只想记录某段代码的耗时：
+
+```python
+with task.timed("tool_call", tool="search_docs"):
+    search_docs(query)
+```
+
+这个 context manager 只记录 latency 和失败状态，然后继续抛出被包裹代码中的异常。
 
 当前示例 traces：
 
@@ -131,6 +154,7 @@ AdaHarness 不是 LangChain、LangGraph、OpenAI Agents SDK 或其他 agent runt
 Version 0.1 聚焦 trace analysis：
 
 - ingest JSONL traces
+- 通过可选 `TraceRecorder` 记录 JSONL traces
 - compute harness metrics
 - flag overconstraint and underconstraint signals
 - recommend policy diffs

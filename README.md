@@ -34,7 +34,7 @@ visible from traces before it tries to control any runtime.
 - Overconstraint and underconstraint diagnosis
 - Suggested policy diffs backed by trace evidence
 - Model migration and harness drift reports
-- Lightweight trace recorder SDK in future versions
+- Lightweight trace recorder SDK for host projects
 
 ## Current Status
 
@@ -96,7 +96,7 @@ your own eval runs.
 You can integrate in three ways:
 
 - Write JSONL events directly from your project.
-- Use a future `TraceRecorder` helper to write the same JSONL format.
+- Use `TraceRecorder` to write the same JSONL format.
 - Convert existing logs or observability exports into AdaHarness trace events.
 
 For example, a tool call in your project can become:
@@ -106,6 +106,30 @@ For example, a tool call in your project can become:
 ```
 
 AdaHarness analyzes that event; it does not run `search_docs`.
+
+Using the recorder:
+
+```python
+from adaharness.trace import TraceRecorder
+
+trace = TraceRecorder(".adaharness/traces/run.jsonl", model="gpt-example", policy="current")
+task = trace.task("support_001")
+
+task.planner(latency_ms=320)
+task.tool_call(tool="search_docs", status="success", latency_ms=180)
+task.verifier(status="pass", cost=0.002)
+task.final(success=True, cost=0.012, latency_ms=2200)
+```
+
+For timing a block without changing runtime behavior:
+
+```python
+with task.timed("tool_call", tool="search_docs"):
+    search_docs(query)
+```
+
+The context manager records latency and failure status, then re-raises any
+exception from the wrapped code.
 
 Additional example traces are available:
 
@@ -161,6 +185,7 @@ for the MVP. Runtime binding and adapter-based control are experimental.
 Version 0.1 focuses on trace analysis:
 
 - ingest JSONL traces
+- record JSONL traces through the optional `TraceRecorder`
 - compute harness metrics
 - flag overconstraint and underconstraint signals
 - recommend policy diffs

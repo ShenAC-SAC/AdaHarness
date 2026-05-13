@@ -25,6 +25,7 @@ remain experimental scaffolding. They are not the MVP product boundary.
   structured output.
 - Trace validation warnings, diagnostic confidence, and configurable diagnostic
   thresholds.
+- Minimal `TraceRecorder` SDK for host projects that want a small JSONL writer.
 
 ## Phase 1 Trace Ingestion
 
@@ -81,9 +82,9 @@ system behavior.
 
 Goal: reduce integration friction further.
 
-- Add a small `TraceRecorder` helper for agent projects.
-- Keep it optional; users can still export JSONL manually.
-- Do not add runtime control or hook mutation.
+- Add a small `TraceRecorder` helper for agent projects. Completed.
+- Keep it optional; users can still export JSONL manually. Completed.
+- Do not add runtime control or hook mutation. Completed.
 
 Acceptance: a host project can record AdaHarness-compatible traces in a few
 lines of code.

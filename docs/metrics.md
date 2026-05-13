@@ -40,7 +40,8 @@ Optional fields:
 - `status`: `pass`, `fail`, `success`, or `failed`.
 - `success`: boolean final outcome for `final` events.
 - `cost`, `latency_ms`, `tokens`: observed cost and overhead.
-- `model`, `policy`, `control`, `reason`: grouping and explanation metadata.
+- `model`, `policy`, `control`, `reason`, `tool`, `schema_version`: grouping,
+  explanation, and compatibility metadata.
 
 ## MVP Metrics
 

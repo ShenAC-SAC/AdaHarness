@@ -1,4 +1,4 @@
-"""Embedded-first harness calibration for LLM agent projects."""
+"""Trace-first harness drift analysis for LLM agent projects."""
 
 from adaharness.api import (
     bind_harness_spec,
