@@ -70,9 +70,21 @@ adaharness init
 ```
 
 This creates `.adaharness/diagnostics/default.toml`, `.adaharness/policies/current-policy.json`,
-example traces, and a reports directory. This is an installation smoke test and
-a file layout starter, not a real diagnosis of your agent project. You can
-immediately run:
+sample tasks, example traces, and a reports directory. The bundled traces are an
+installation smoke test, not a real diagnosis of your agent project. For real
+data, point `capture` at a single-task command that runs your agent:
+
+```bash
+adaharness capture \
+  --tasks .adaharness/tasks/sample-tasks.jsonl \
+  --out .adaharness/traces/run.jsonl \
+  --analyze-out .adaharness/reports/harness-drift.md \
+  --current-policy .adaharness/policies/current-policy.json \
+  --diagnostics-config .adaharness/diagnostics/default.toml \
+  -- python your_agent.py --prompt "{prompt}"
+```
+
+You can still run the bundled trace demo:
 
 ```bash
 adaharness analyze \
@@ -84,10 +96,32 @@ adaharness analyze \
 
 ## MVP Usage
 
-The intended MVP flow is trace-first. AdaHarness does not assume your project has
-an `agent eval` command. It needs one concrete input: JSONL events from whatever
-already runs your agent, such as an existing test suite, benchmark script,
-manual QA script, staging job, or log export.
+The intended MVP flow is trace-first, but AdaHarness should help produce traces.
+It does not assume your project has an `agent eval` command. The `capture`
+command can run a normal single-task agent entrypoint for each task in a JSONL
+task file, judge simple expectations, and write AdaHarness traces.
+
+Task file:
+
+```json
+{"task_id":"t1","prompt":"Answer with OK.","expected_contains":"OK"}
+```
+
+Capture command:
+
+```bash
+adaharness capture \
+  --tasks .adaharness/tasks/sample-tasks.jsonl \
+  --out .adaharness/traces/run.jsonl \
+  -- python your_agent.py --prompt "{prompt}"
+```
+
+If your agent prints lines prefixed with `ADAHARNESS_EVENT `, `capture` records
+those as detailed harness events:
+
+```text
+ADAHARNESS_EVENT {"event":"tool_call","tool":"search_docs","status":"success","latency_ms":180}
+```
 
 For a bundled demo trace:
 

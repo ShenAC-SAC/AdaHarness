@@ -58,7 +58,19 @@ uv sync --group dev
 adaharness init
 ```
 
-这会生成 `.adaharness/diagnostics/default.toml`、`.adaharness/policies/current-policy.json`、示例 traces 和 reports 目录。它的作用是安装自检和文件布局起步，不是真实诊断你的 agent 项目。随后可以直接运行：
+这会生成 `.adaharness/diagnostics/default.toml`、`.adaharness/policies/current-policy.json`、sample tasks、示例 traces 和 reports 目录。内置 traces 只是安装自检，不是真实诊断你的 agent 项目。真实数据应该用 `capture` 调你的单任务 agent 入口生成：
+
+```bash
+adaharness capture \
+  --tasks .adaharness/tasks/sample-tasks.jsonl \
+  --out .adaharness/traces/run.jsonl \
+  --analyze-out .adaharness/reports/harness-drift.md \
+  --current-policy .adaharness/policies/current-policy.json \
+  --diagnostics-config .adaharness/diagnostics/default.toml \
+  -- python your_agent.py --prompt "{prompt}"
+```
+
+仍然可以运行内置 trace demo：
 
 ```bash
 adaharness analyze \
@@ -70,7 +82,28 @@ adaharness analyze \
 
 ## MVP 用法
 
-当前推荐的 MVP 流程是 trace-first。AdaHarness 不假设用户项目里已经有一个叫 `agent eval` 的指令。它只需要一个具体输入：来自你现有 agent 运行过程的 JSONL events，比如已有测试、benchmark 脚本、人工 QA 脚本、staging job，或者日志导出。
+当前推荐的 MVP 流程是 trace-first，但 AdaHarness 应该帮助用户生成 traces。它不假设用户项目里已经有一个叫 `agent eval` 的指令。`capture` 可以读取 JSONL 任务文件，逐条调用一个普通的单任务 agent 入口，做简单期望判断，并写出 AdaHarness traces。
+
+任务文件：
+
+```json
+{"task_id":"t1","prompt":"Answer with OK.","expected_contains":"OK"}
+```
+
+采集命令：
+
+```bash
+adaharness capture \
+  --tasks .adaharness/tasks/sample-tasks.jsonl \
+  --out .adaharness/traces/run.jsonl \
+  -- python your_agent.py --prompt "{prompt}"
+```
+
+如果你的 agent 输出带 `ADAHARNESS_EVENT ` 前缀的行，`capture` 会把它们记录成更详细的 harness events：
+
+```text
+ADAHARNESS_EVENT {"event":"tool_call","tool":"search_docs","status":"success","latency_ms":180}
+```
 
 内置 demo trace 可以这样跑：
 

@@ -26,6 +26,7 @@ class InitCliTests(unittest.TestCase):
             self.assertTrue((root / "README.md").exists())
             self.assertTrue((root / "diagnostics" / "default.toml").exists())
             self.assertTrue((root / "policies" / "current-policy.json").exists())
+            self.assertTrue((root / "tasks" / "sample-tasks.jsonl").exists())
             self.assertTrue((root / "traces" / "overconstrained_harness.jsonl").exists())
             self.assertTrue((root / "traces" / "undercontrolled_tool_use.jsonl").exists())
             self.assertTrue((root / "reports").is_dir())

@@ -17,6 +17,7 @@ from adaharness.analysis import (
     render_analysis_report,
     validate_trace_events,
 )
+from adaharness.capture import capture_command_runs, load_capture_tasks
 from adaharness.config import AdaHarnessConfig, load_config
 from adaharness.evals.runner import compare_harness_runs
 from adaharness.evals.task_schema import load_taskset
@@ -55,6 +56,7 @@ INIT_TEMPLATE_FILES = (
     ("README.md", "README.md"),
     ("diagnostics/default.toml", "diagnostics/default.toml"),
     ("policies/current-policy.json", "policies/current-policy.json"),
+    ("tasks/sample-tasks.jsonl", "tasks/sample-tasks.jsonl"),
     ("traces/overconstrained_harness.jsonl", "traces/overconstrained_harness.jsonl"),
     ("traces/undercontrolled_tool_use.jsonl", "traces/undercontrolled_tool_use.jsonl"),
 )
@@ -295,14 +297,30 @@ def cmd_init(args: argparse.Namespace) -> int:
 
 
 def cmd_analyze(args: argparse.Namespace) -> int:
-    events = load_trace_events([Path(path) for path in args.traces])
-    diagnostics_config = load_diagnostic_config(args.diagnostics_config)
+    _run_analysis(
+        trace_paths=[Path(path) for path in args.traces],
+        current_policy=Path(args.current_policy) if args.current_policy else None,
+        diagnostics_config_path=args.diagnostics_config,
+        out=Path(args.out) if args.out else None,
+    )
+    return 0
+
+
+def _run_analysis(
+    *,
+    trace_paths: list[Path],
+    current_policy: Path | None = None,
+    diagnostics_config_path: str | None = None,
+    out: Path | None = None,
+) -> str:
+    events = load_trace_events(trace_paths)
+    diagnostics_config = load_diagnostic_config(diagnostics_config_path)
     trace_warnings = validate_trace_events(events)
     metrics = compute_trace_metrics(events)
     signals = diagnose_harness(metrics, config=diagnostics_config)
     changes = recommend_policy_changes(
         signals,
-        current_policy=_load_policy_dict(Path(args.current_policy)) if args.current_policy else None,
+        current_policy=_load_policy_dict(current_policy) if current_policy else None,
     )
     report = render_analysis_report(
         metrics=metrics,
@@ -315,8 +333,8 @@ def cmd_analyze(args: argparse.Namespace) -> int:
     trace_warnings_data = [warning.to_dict() for warning in trace_warnings]
     diagnosis_data = [signal.to_dict() for signal in signals]
     policy_diff_data = [change.to_dict() for change in changes]
-    if args.out:
-        report_path = Path(args.out)
+    if out:
+        report_path = out
         report_path.parent.mkdir(parents=True, exist_ok=True)
         report_path.write_text(report + "\n", encoding="utf-8")
         _write_analysis_sidecars(
@@ -329,6 +347,36 @@ def cmd_analyze(args: argparse.Namespace) -> int:
         )
     else:
         print(report)
+    return report
+
+
+def cmd_capture(args: argparse.Namespace) -> int:
+    command = list(args.command)
+    if command and command[0] == "--":
+        command = command[1:]
+    tasks = load_capture_tasks(Path(args.tasks))
+    out_path = Path(args.out)
+    summary = capture_command_runs(
+        tasks=tasks,
+        command=command,
+        out_path=out_path,
+        model=args.model,
+        policy=args.policy,
+        timeout=args.timeout,
+        stdin_field=args.stdin_field,
+        append=args.append,
+        include_output=args.include_output,
+    )
+    data = summary.to_dict()
+    if args.analyze_out:
+        _run_analysis(
+            trace_paths=[out_path],
+            current_policy=Path(args.current_policy) if args.current_policy else None,
+            diagnostics_config_path=args.diagnostics_config,
+            out=Path(args.analyze_out),
+        )
+        data["analysis_report"] = args.analyze_out
+    print(json.dumps(data, indent=2))
     return 0
 
 
@@ -587,6 +635,24 @@ def build_parser() -> argparse.ArgumentParser:
     analyze.add_argument("--diagnostics-config", help="Optional TOML file with diagnostic thresholds")
     analyze.add_argument("--out")
     analyze.set_defaults(func=cmd_analyze)
+
+    capture = subparsers.add_parser(
+        "capture",
+        help="Run task cases through a command and write AdaHarness traces",
+    )
+    capture.add_argument("--tasks", required=True, help="JSON or JSONL task file")
+    capture.add_argument("--out", default=".adaharness/traces/run.jsonl")
+    capture.add_argument("--model")
+    capture.add_argument("--policy")
+    capture.add_argument("--timeout", type=float, default=60.0)
+    capture.add_argument("--stdin-field", help="Task field to pass to command stdin")
+    capture.add_argument("--append", action="store_true")
+    capture.add_argument("--include-output", action="store_true")
+    capture.add_argument("--analyze-out", help="Optional report path to analyze captured traces")
+    capture.add_argument("--current-policy", help="Optional current policy for --analyze-out")
+    capture.add_argument("--diagnostics-config", help="Optional TOML thresholds for --analyze-out")
+    capture.add_argument("command", nargs=argparse.REMAINDER, help="Command after --, supports {task_field}")
+    capture.set_defaults(func=cmd_capture)
 
     calibrate = subparsers.add_parser(
         "calibrate",

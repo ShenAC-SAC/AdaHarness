@@ -46,7 +46,28 @@ jobs:
           test -f runs/init/README.md
           test -f runs/init/diagnostics/default.toml
           test -f runs/init/policies/current-policy.json
+          test -f runs/init/tasks/sample-tasks.jsonl
           test -f runs/init/traces/overconstrained_harness.jsonl
+
+      - name: Smoke test capture CLI
+        run: |
+          cat > runs/fake-agent.py <<'PY'
+          import json
+          import sys
+
+          prompt = sys.argv[1]
+          print("ADAHARNESS_EVENT " + json.dumps({"event": "verifier", "status": "pass", "cost": 0.001}))
+          print("OK" if prompt else "missing prompt")
+          PY
+          uv run adaharness capture \
+            --tasks runs/init/tasks/sample-tasks.jsonl \
+            --out runs/captured.jsonl \
+            --analyze-out runs/captured-report.md \
+            --current-policy runs/init/policies/current-policy.json \
+            --diagnostics-config runs/init/diagnostics/default.toml \
+            -- python runs/fake-agent.py "{prompt}"
+          test -f runs/captured.jsonl
+          test -f runs/captured-report.md
 
       - name: Smoke test analyze CLI
         run: |

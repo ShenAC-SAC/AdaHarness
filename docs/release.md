@@ -36,8 +36,12 @@ Smoke test the built wheel in a clean virtual environment:
 python -m venv /tmp/adaharness-wheel-test
 /tmp/adaharness-wheel-test/bin/pip install dist/adaharness-*.whl
 /tmp/adaharness-wheel-test/bin/adaharness init --path /tmp/adaharness-wheel-test/project/.adaharness
+/tmp/adaharness-wheel-test/bin/adaharness capture \
+  --tasks /tmp/adaharness-wheel-test/project/.adaharness/tasks/sample-tasks.jsonl \
+  --out /tmp/adaharness-wheel-test/project/.adaharness/traces/run.jsonl \
+  -- python -c 'import sys; print("OK")'
 /tmp/adaharness-wheel-test/bin/adaharness analyze \
-  --traces /tmp/adaharness-wheel-test/project/.adaharness/traces/overconstrained_harness.jsonl \
+  --traces /tmp/adaharness-wheel-test/project/.adaharness/traces/run.jsonl \
   --current-policy /tmp/adaharness-wheel-test/project/.adaharness/policies/current-policy.json \
   --diagnostics-config /tmp/adaharness-wheel-test/project/.adaharness/diagnostics/default.toml \
   --out /tmp/adaharness-wheel-test/project/.adaharness/reports/harness-drift.md

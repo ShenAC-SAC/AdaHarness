@@ -1,0 +1,2 @@
+{"task_id":"sample_001","prompt":"Answer with OK if the agent is reachable.","expected_contains":"OK"}
+{"task_id":"sample_002","prompt":"Answer with OK after checking the requested condition.","expected_contains":"OK"}
