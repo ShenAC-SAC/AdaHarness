@@ -276,6 +276,10 @@ def cmd_init(args: argparse.Namespace) -> int:
     reports_dir.mkdir(parents=True, exist_ok=True)
     data = {
         "path": str(root),
+        "purpose": (
+            "Starter files for smoke testing AdaHarness. Replace bundled traces with "
+            "JSONL events from your own agent runs before using the report for decisions."
+        ),
         "created": created,
         "skipped": skipped,
         "example_command": (

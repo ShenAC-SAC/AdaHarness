@@ -21,6 +21,7 @@ class InitCliTests(unittest.TestCase):
 
             self.assertEqual(exit_code, 0)
             self.assertEqual(data["path"], str(root))
+            self.assertIn("Starter files", data["purpose"])
             self.assertIn("example_command", data)
             self.assertTrue((root / "README.md").exists())
             self.assertTrue((root / "diagnostics" / "default.toml").exists())

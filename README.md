@@ -63,14 +63,16 @@ For local development:
 uv sync --group dev
 ```
 
-After installation, create starter files in your agent project:
+After installation, you can create starter files:
 
 ```bash
 adaharness init
 ```
 
 This creates `.adaharness/diagnostics/default.toml`, `.adaharness/policies/current-policy.json`,
-example traces, and a reports directory. You can immediately run:
+example traces, and a reports directory. This is an installation smoke test and
+a file layout starter, not a real diagnosis of your agent project. You can
+immediately run:
 
 ```bash
 adaharness analyze \
@@ -82,8 +84,12 @@ adaharness analyze \
 
 ## MVP Usage
 
-The intended MVP flow is trace-first. A project exports JSONL traces or eval
-results, then AdaHarness analyzes harness drift:
+The intended MVP flow is trace-first. AdaHarness does not assume your project has
+an `agent eval` command. It needs one concrete input: JSONL events from whatever
+already runs your agent, such as an existing test suite, benchmark script,
+manual QA script, staging job, or log export.
+
+For a bundled demo trace:
 
 ```bash
 uv run adaharness analyze \
@@ -103,7 +109,8 @@ Trace events can start small:
 ```
 
 AdaHarness should produce a report explaining whether controls are useful,
-wasteful, or missing.
+wasteful, or missing. That report is only meaningful for your project after you
+replace the bundled demo trace with events from your own agent runs.
 
 Diagnostic rules are configurable heuristics, not benchmark truth. Reports
 include rule thresholds, observed values, evidence counts, confidence, and trace
@@ -117,7 +124,7 @@ for a large latency share.
 
 AdaHarness does not connect to your tools or execute your runtime. It only needs
 your agent project to export trace events that describe what happened during
-your own eval runs.
+runs you already perform.
 
 You can integrate in three ways:
 

@@ -52,13 +52,13 @@ uv tool install adaharness
 uv sync --group dev
 ```
 
-安装后，在你的 agent 项目中创建起步文件：
+安装后，可以创建起步文件：
 
 ```bash
 adaharness init
 ```
 
-这会生成 `.adaharness/diagnostics/default.toml`、`.adaharness/policies/current-policy.json`、示例 traces 和 reports 目录。随后可以直接运行：
+这会生成 `.adaharness/diagnostics/default.toml`、`.adaharness/policies/current-policy.json`、示例 traces 和 reports 目录。它的作用是安装自检和文件布局起步，不是真实诊断你的 agent 项目。随后可以直接运行：
 
 ```bash
 adaharness analyze \
@@ -70,7 +70,9 @@ adaharness analyze \
 
 ## MVP 用法
 
-当前推荐的 MVP 流程是 trace-first。用户项目导出 JSONL traces 或 eval results，然后 AdaHarness 分析 harness drift：
+当前推荐的 MVP 流程是 trace-first。AdaHarness 不假设用户项目里已经有一个叫 `agent eval` 的指令。它只需要一个具体输入：来自你现有 agent 运行过程的 JSONL events，比如已有测试、benchmark 脚本、人工 QA 脚本、staging job，或者日志导出。
+
+内置 demo trace 可以这样跑：
 
 ```bash
 uv run adaharness analyze \
@@ -89,7 +91,7 @@ trace event 可以从很小的格式开始：
 {"task_id":"t1","event":"final","success":true,"cost":0.012,"latency_ms":2200}
 ```
 
-AdaHarness 会生成报告，解释哪些 controls 有用、浪费，或缺失。
+AdaHarness 会生成报告，解释哪些 controls 有用、浪费，或缺失。只有把内置 demo trace 换成你自己 agent 运行产生的 events 后，这份报告才对你的项目有决策价值。
 
 diagnostic rules 是可配置 heuristics，不是 benchmark truth。报告会展示规则阈值、观测值、evidence count、confidence 和 trace quality warnings，让建议可审计。
 
@@ -97,7 +99,7 @@ diagnostic rules 是可配置 heuristics，不是 benchmark truth。报告会展
 
 ## 用户项目如何接入
 
-AdaHarness 不连接你的工具，也不执行你的 runtime。它只需要你的 agent 项目把自己的 eval 运行过程导出成 trace events。
+AdaHarness 不连接你的工具，也不执行你的 runtime。它只需要你的 agent 项目把已有运行过程导出成 trace events。
 
 接入方式可以有三种：
 
