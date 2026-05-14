@@ -16,6 +16,7 @@ policy compiler.
   latency evidence.
 - Compute verifier, planner, retry, tool-use, cost, latency, and success metrics.
 - Diagnose overconstraint and underconstraint signals.
+- Summarize single-trace evidence into a fit verdict.
 - Attach evidence, confidence, evidence counts, and rule thresholds to
   diagnostics.
 - Recommend advisory policy diffs from signals.

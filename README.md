@@ -23,6 +23,8 @@ exported traces -> validation -> metrics -> diagnosis -> policy diff -> report
 
 AdaHarness produces:
 
+- a fit verdict such as `well_fit`, `likely_overcontrolled`,
+  `likely_undercontrolled`, `mixed_signals`, or `insufficient_evidence`
 - trace quality warnings
 - harness metrics such as verifier catch rate, retry success rate, verifier cost
   share, planner latency share, and tool failure rate
@@ -159,6 +161,9 @@ AdaHarness may recommend changes such as:
 ```
 
 Recommendations are advisory. AdaHarness does not apply them to your project.
+For a single trace set, the fit verdict is observational: it summarizes current
+evidence, but it does not prove that a policy is optimal without a baseline or
+policy comparison run.
 
 ## Python API
 

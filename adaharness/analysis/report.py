@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from adaharness.analysis.diagnostics import DiagnosticSignal
+from adaharness.analysis.fit import FitVerdict
 from adaharness.analysis.metrics import TraceMetrics
 from adaharness.analysis.policy_diff import PolicyChange
 from adaharness.analysis.validation import TraceValidationWarning
@@ -9,6 +10,7 @@ from adaharness.analysis.validation import TraceValidationWarning
 def render_analysis_report(
     *,
     metrics: TraceMetrics,
+    fit_verdict: FitVerdict,
     signals: tuple[DiagnosticSignal, ...],
     changes: tuple[PolicyChange, ...],
     trace_warnings: tuple[TraceValidationWarning, ...] = (),
@@ -18,14 +20,31 @@ def render_analysis_report(
         "",
         "## Summary",
         "",
+        f"- Fit verdict: {fit_verdict.status}",
+        f"- Verdict confidence: {fit_verdict.confidence}",
+        f"- Verdict summary: {fit_verdict.summary}",
         f"- Task count: {metrics.task_count}",
         f"- Success rate: {metrics.success_rate:.2f}",
         f"- Total cost: {metrics.total_cost:.4f}",
         f"- Total latency ms: {metrics.total_latency_ms:.0f}",
         "",
-        "## Trace Quality",
+        "## Fit Verdict",
         "",
+        f"- Status: `{fit_verdict.status}`",
+        f"- Confidence: {fit_verdict.confidence}",
+        f"- Summary: {fit_verdict.summary}",
+        f"- Evidence count: {fit_verdict.evidence_count}",
+        f"- Primary controls: {_format_controls(fit_verdict.primary_controls)}",
     ]
+    for item in fit_verdict.evidence:
+        lines.append(f"- Evidence: {item}")
+    lines.extend(
+        [
+            "",
+            "## Trace Quality",
+            "",
+        ]
+    )
     if not trace_warnings:
         lines.append("- No trace quality warnings detected.")
     for warning in trace_warnings:
@@ -70,3 +89,7 @@ def render_analysis_report(
         for item in change.evidence:
             lines.append(f"  - Evidence: {item}")
     return "\n".join(lines)
+
+
+def _format_controls(controls: tuple[str, ...]) -> str:
+    return ", ".join(f"`{control}`" for control in controls) if controls else "none"

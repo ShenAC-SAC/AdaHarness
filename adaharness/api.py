@@ -5,6 +5,7 @@ from typing import Any
 import json
 
 from adaharness.analysis import (
+    assess_harness_fit,
     compute_trace_metrics,
     diagnose_harness,
     load_diagnostic_config,
@@ -28,12 +29,18 @@ def analyze_traces(
     trace_warnings = validate_trace_events(events)
     metrics = compute_trace_metrics(events)
     signals = diagnose_harness(metrics, config=config)
+    fit_verdict = assess_harness_fit(
+        metrics=metrics,
+        signals=signals,
+        trace_warnings=trace_warnings,
+    )
     changes = recommend_policy_changes(
         signals,
         current_policy=_policy_dict(current_policy),
     )
     report = render_analysis_report(
         metrics=metrics,
+        fit_verdict=fit_verdict,
         signals=signals,
         changes=changes,
         trace_warnings=trace_warnings,
@@ -41,6 +48,7 @@ def analyze_traces(
     return {
         "diagnostics_config": config.to_dict(),
         "metrics": metrics.to_dict(),
+        "fit_verdict": fit_verdict.to_dict(),
         "trace_warnings": [warning.to_dict() for warning in trace_warnings],
         "diagnosis": {"signals": [signal.to_dict() for signal in signals]},
         "policy_diff": {"changes": [change.to_dict() for change in changes]},

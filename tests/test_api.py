@@ -30,6 +30,8 @@ class PublicApiTests(unittest.TestCase):
 
         self.assertIn("AdaHarness Drift Report", data["report"])
         self.assertEqual(data["metrics"]["task_count"], 5)
+        self.assertEqual(data["fit_verdict"]["status"], "likely_overcontrolled")
+        self.assertEqual(data["fit_verdict"]["primary_controls"], ("verification_control",))
         self.assertEqual(data["policy_diff"]["changes"][0]["field"], "verification_control")
         self.assertEqual(data["policy_diff"]["changes"][0]["from"], "always")
         self.assertEqual(data["policy_diff"]["changes"][0]["to"], "selective")

@@ -11,6 +11,7 @@ TraceRecorder / JSONL traces
 -> TraceValidation
 -> TraceMetrics
 -> HarnessDiagnosis
+-> FitVerdict
 -> PolicyDiff
 -> Report
 ```
@@ -21,7 +22,7 @@ and dashboards.
 ## Package Boundaries
 
 - `adaharness/analysis/` owns trace ingestion, validation, metrics, diagnosis,
-  policy diff recommendation, and report rendering.
+  fit verdicts, policy diff recommendation, and report rendering.
 - `adaharness/trace/` owns optional JSONL recording helpers for host projects.
   It writes events only; it must not mutate or control the host runtime.
 - `adaharness/api.py` exposes a small `analyze_traces(...)` API for code users.
@@ -74,3 +75,17 @@ AdaHarness prefers observable trace evidence over abstract model scores:
 Diagnostic rules are configurable heuristics. Reports include rule thresholds,
 observed values, evidence counts, confidence, and trace quality warnings so
 recommendations stay auditable.
+
+## Fit Verdict
+
+Single-trace analysis produces an observational fit verdict:
+
+- `well_fit`
+- `likely_overcontrolled`
+- `likely_undercontrolled`
+- `mixed_signals`
+- `insufficient_evidence`
+
+This verdict summarizes diagnostic signals for scanning. It is not a causal
+claim that the current harness is optimal. Stronger claims require migration
+comparison or policy experiment traces.

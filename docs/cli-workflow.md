@@ -25,7 +25,8 @@ reports/harness-drift.policy-diff.json
 ```
 
 `analysis.json` includes the diagnostics config, trace warnings, metrics,
-diagnosis signals, and suggested policy diff in one machine-readable artifact.
+fit verdict, diagnosis signals, and suggested policy diff in one
+machine-readable artifact.
 
 ## Trace Format
 

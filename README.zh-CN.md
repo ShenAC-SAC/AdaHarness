@@ -21,6 +21,8 @@ exported traces -> validation -> metrics -> diagnosis -> policy diff -> report
 
 AdaHarness 输出：
 
+- fit verdict，例如 `well_fit`、`likely_overcontrolled`、
+  `likely_undercontrolled`、`mixed_signals` 或 `insufficient_evidence`
 - trace 质量警告
 - verifier catch rate、retry success rate、verifier cost share、planner latency
   share、tool failure rate 等 harness 指标
@@ -155,6 +157,8 @@ AdaHarness 可能给出这样的建议：
 ```
 
 这些建议只用于辅助判断。AdaHarness 不会自动修改你的项目。
+对于单组 trace，fit verdict 是 observational 诊断：它总结当前证据，但没有
+baseline 或 policy 对照实验时，不证明某个 policy 是最优的。
 
 ## Python API
 

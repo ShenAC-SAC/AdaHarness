@@ -2,6 +2,7 @@ import unittest
 
 from adaharness.analysis import (
     TraceEvent,
+    assess_harness_fit,
     compute_trace_metrics,
     diagnose_harness,
     load_diagnostic_config,
@@ -70,12 +71,53 @@ class AnalysisTests(unittest.TestCase):
                 "verification_control": "off",
             },
         )
-        report = render_analysis_report(metrics=metrics, signals=signals, changes=changes)
+        fit_verdict = assess_harness_fit(metrics=metrics, signals=signals)
+        report = render_analysis_report(
+            metrics=metrics,
+            fit_verdict=fit_verdict,
+            signals=signals,
+            changes=changes,
+        )
 
         self.assertGreater(metrics.tool_failure_rate, 0.0)
+        self.assertEqual(fit_verdict.status, "likely_undercontrolled")
+        self.assertIn("tool_control", fit_verdict.primary_controls)
         self.assertIn("tool_control", [signal.control for signal in signals])
         self.assertIn("retry_control", [change.field for change in changes])
         self.assertIn("AdaHarness Drift Report", report)
+        self.assertIn("Fit verdict: likely_undercontrolled", report)
+
+    def test_fit_verdict_summarizes_overconstraint(self) -> None:
+        events = []
+        for index in range(5):
+            task_id = f"t{index}"
+            events.extend(
+                [
+                    TraceEvent(task_id=task_id, event="verifier", status="pass", cost=0.01),
+                    TraceEvent(task_id=task_id, event="final", success=True, cost=0.02),
+                ]
+            )
+
+        metrics = compute_trace_metrics(tuple(events))
+        signals = diagnose_harness(metrics)
+        verdict = assess_harness_fit(metrics=metrics, signals=signals)
+
+        self.assertEqual(verdict.status, "likely_overcontrolled")
+        self.assertEqual(verdict.confidence, "low")
+        self.assertEqual(verdict.primary_controls, ("verification_control",))
+
+    def test_fit_verdict_reports_insufficient_evidence_without_final_outcomes(self) -> None:
+        events = (
+            TraceEvent(task_id="t1", event="planner", latency_ms=100),
+            TraceEvent(task_id="t2", event="verifier", status="pass", cost=0.001),
+        )
+
+        metrics = compute_trace_metrics(events)
+        signals = diagnose_harness(metrics)
+        verdict = assess_harness_fit(metrics=metrics, signals=signals)
+
+        self.assertEqual(verdict.status, "insufficient_evidence")
+        self.assertEqual(verdict.confidence, "low")
 
     def test_ignored_tool_result_without_tool_call_still_signals_underconstraint(self) -> None:
         events = (

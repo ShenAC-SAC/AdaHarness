@@ -19,6 +19,7 @@ def _write_analysis_sidecars(report_path: Path, data: dict[str, Any]) -> None:
         {
             "diagnostics_config": data["diagnostics_config"],
             "metrics": data["metrics"],
+            "fit_verdict": data["fit_verdict"],
             "trace_warnings": data["trace_warnings"],
             "diagnosis": data["diagnosis"],
             "policy_diff": data["policy_diff"],
@@ -29,6 +30,7 @@ def _write_analysis_sidecars(report_path: Path, data: dict[str, Any]) -> None:
         report_path.with_suffix(".diagnosis.json"),
         {
             "config": data["diagnostics_config"],
+            "fit_verdict": data["fit_verdict"],
             "trace_warnings": data["trace_warnings"],
             "signals": data["diagnosis"]["signals"],
         },
