@@ -82,7 +82,7 @@ required fields are `task_id` and `event`.
 ```
 
 Useful optional fields include `status`, `success`, `cost`, `latency_ms`,
-`tokens`, `model`, `policy`, `control`, and `reason`.
+`tokens`, `model`, `policy`, `task_type`, `control`, and `reason`.
 
 Canonical event names include:
 
@@ -164,6 +164,19 @@ Recommendations are advisory. AdaHarness does not apply them to your project.
 For a single trace set, the fit verdict is observational: it summarizes current
 evidence, but it does not prove that a policy is optimal without a baseline or
 policy comparison run.
+
+When one trace file contains multiple models, policies, or task types, group the
+analysis explicitly:
+
+```bash
+adaharness analyze \
+  --traces traces/mixed.jsonl \
+  --group-by model,policy \
+  --out reports/harness-fit.md
+```
+
+Without grouping, AdaHarness warns when aggregate metrics may mix different
+model or harness contexts.
 
 ## Python API
 

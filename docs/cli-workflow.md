@@ -10,6 +10,7 @@ modules.
 adaharness analyze \
   --traces traces/new-model.jsonl \
   --diagnostics-config examples/diagnostics/default.toml \
+  --group-by model,policy \
   --current-policy policies/current.json \
   --out reports/harness-drift.md
 ```
@@ -27,6 +28,8 @@ reports/harness-drift.policy-diff.json
 `analysis.json` includes the diagnostics config, trace warnings, metrics,
 fit verdict, diagnosis signals, and suggested policy diff in one
 machine-readable artifact.
+When `--group-by` is used, `analysis.json` also contains per-group metrics,
+fit verdicts, diagnosis signals, and policy diffs.
 
 ## Trace Format
 
@@ -41,6 +44,19 @@ The initial trace format is JSONL. Each line is an event:
 
 Canonical MVP events are `model_call`, `planner`, `verifier`, `retry`,
 `tool_call`, `tool_result_ignored`, `subagent`, `context`, and `final`.
+
+## Grouping
+
+Use `--group-by` when one trace set contains multiple models, policies, or task
+types:
+
+```bash
+adaharness analyze --traces traces.jsonl --group-by model,policy
+```
+
+Supported dimensions are `model`, `policy`, and `task_type`. If mixed dimensions
+are detected without grouping, AdaHarness warns that aggregate metrics may be
+misleading.
 
 ## Diagnostics Config
 

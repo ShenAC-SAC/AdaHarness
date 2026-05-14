@@ -9,6 +9,7 @@ The maintained flow is:
 ```text
 TraceRecorder / JSONL traces
 -> TraceValidation
+-> Optional TraceGrouping
 -> TraceMetrics
 -> HarnessDiagnosis
 -> FitVerdict
@@ -57,8 +58,25 @@ Important optional fields:
 - `tokens`
 - `model`
 - `policy`
+- `task_type`
 - `control`
 - `reason`
+
+## Grouped Analysis
+
+`compute_trace_metrics(...)` intentionally works on one event set. Grouping is a
+separate orchestration step, so metric semantics do not change when users ask for
+per-model or per-policy analysis.
+
+Supported grouping dimensions are:
+
+- `model`
+- `policy`
+- `task_type`
+
+If a trace contains multiple values for these dimensions and the user does not
+group by them, AdaHarness emits trace quality warnings because aggregate fit
+verdicts may be misleading.
 
 ## Metrics and Diagnostics
 

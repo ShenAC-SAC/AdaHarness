@@ -15,6 +15,7 @@ class TraceEvent:
     status: str | None = None
     model: str | None = None
     policy: str | None = None
+    task_type: str | None = None
     control: str | None = None
     reason: str | None = None
     success: bool | None = None
@@ -39,6 +40,7 @@ class TraceEvent:
             status=_optional_str(data.get("status")),
             model=_optional_str(data.get("model", data.get("model_name"))),
             policy=_optional_str(data.get("policy")),
+            task_type=_optional_str(data.get("task_type")),
             control=_optional_str(data.get("control")),
             reason=_optional_str(data.get("reason")),
             success=_optional_bool(data.get("success")),
@@ -56,7 +58,18 @@ class TraceEvent:
                 "event": self.event,
             }
         )
-        for key in ("status", "model", "policy", "control", "reason", "success", "cost", "latency_ms", "tokens"):
+        for key in (
+            "status",
+            "model",
+            "policy",
+            "task_type",
+            "control",
+            "reason",
+            "success",
+            "cost",
+            "latency_ms",
+            "tokens",
+        ):
             value = getattr(self, key)
             if value is not None:
                 data[key] = value

@@ -17,7 +17,7 @@ class TraceRecorderTests(unittest.TestCase):
             trace.planner(latency_ms=25)
             trace.verifier(status="pass", cost=0.001)
             trace.tool_call(tool="search_docs", status="success", latency_ms=100)
-            trace.final(success=True, cost=0.010, latency_ms=500)
+            trace.final(success=True, cost=0.010, latency_ms=500, task_type="support")
 
             events = load_trace_events([path])
             metrics = compute_trace_metrics(events)
@@ -27,6 +27,7 @@ class TraceRecorderTests(unittest.TestCase):
         self.assertEqual(events[0].model, "gpt-example")
         self.assertEqual(events[0].policy, "current")
         self.assertEqual(metrics.success_rate, 1.0)
+        self.assertEqual(events[-1].task_type, "support")
         self.assertEqual(metrics.tool_call_count, 1)
         self.assertEqual(warnings, ())
 

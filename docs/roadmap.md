@@ -17,6 +17,7 @@ policy compiler.
 - Compute verifier, planner, retry, tool-use, cost, latency, and success metrics.
 - Diagnose overconstraint and underconstraint signals.
 - Summarize single-trace evidence into a fit verdict.
+- Group single-trace analysis by model, policy, or task type.
 - Attach evidence, confidence, evidence counts, and rule thresholds to
   diagnostics.
 - Recommend advisory policy diffs from signals.

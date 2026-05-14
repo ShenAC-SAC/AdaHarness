@@ -71,9 +71,65 @@ class AnalyzeCliTests(unittest.TestCase):
             self.assertIn("trace_warnings", analysis)
             self.assertIn("diagnosis", analysis)
             self.assertIn("policy_diff", analysis)
+            self.assertEqual(analysis["group_by"], [])
+            self.assertEqual(analysis["groups"], [])
             self.assertEqual(analysis["fit_verdict"]["status"], "likely_overcontrolled")
             diagnosis = json.loads(report_path.with_suffix(".diagnosis.json").read_text(encoding="utf-8"))
             self.assertIn("fit_verdict", diagnosis)
             policy_diff = json.loads(report_path.with_suffix(".policy-diff.json").read_text(encoding="utf-8"))
             self.assertEqual(policy_diff["changes"][0]["field"], "verification_control")
             self.assertEqual(policy_diff["changes"][0]["confidence"], "low")
+
+    def test_analyze_group_by_writes_grouped_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            trace_path = root / "trace.jsonl"
+            report_path = root / "report.md"
+            trace_path.write_text(
+                "\n".join(
+                    [
+                        json.dumps(
+                            {
+                                "task_id": "old-1",
+                                "model": "old-model",
+                                "event": "final",
+                                "success": True,
+                                "cost": 0.01,
+                            }
+                        ),
+                        json.dumps(
+                            {
+                                "task_id": "new-1",
+                                "model": "new-model",
+                                "event": "final",
+                                "success": False,
+                                "cost": 0.01,
+                            }
+                        ),
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            with redirect_stdout(StringIO()):
+                exit_code = main(
+                    [
+                        "analyze",
+                        "--traces",
+                        str(trace_path),
+                        "--group-by",
+                        "model",
+                        "--out",
+                        str(report_path),
+                    ]
+                )
+
+            analysis = json.loads(report_path.with_suffix(".analysis.json").read_text(encoding="utf-8"))
+            metrics = json.loads(report_path.with_suffix(".metrics.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(analysis["group_by"], ["model"])
+        self.assertEqual(len(analysis["groups"]), 2)
+        self.assertIn("aggregate", metrics)
+        self.assertEqual(len(metrics["groups"]), 2)

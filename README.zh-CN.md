@@ -80,7 +80,7 @@ trace 协议刻意保持很小。JSONL 每一行是一条事件，必需字段�
 ```
 
 常用可选字段包括 `status`、`success`、`cost`、`latency_ms`、`tokens`、
-`model`、`policy`、`control` 和 `reason`。
+`model`、`policy`、`task_type`、`control` 和 `reason`。
 
 推荐事件名：
 
@@ -159,6 +159,18 @@ AdaHarness 可能给出这样的建议：
 这些建议只用于辅助判断。AdaHarness 不会自动修改你的项目。
 对于单组 trace，fit verdict 是 observational 诊断：它总结当前证据，但没有
 baseline 或 policy 对照实验时，不证明某个 policy 是最优的。
+
+如果一个 trace 文件里混有多个 model、policy 或 task type，需要显式分组：
+
+```bash
+adaharness analyze \
+  --traces traces/mixed.jsonl \
+  --group-by model,policy \
+  --out reports/harness-fit.md
+```
+
+如果不分组，AdaHarness 会在 aggregate metrics 可能混合不同 model/harness 上下文
+时给出 warning。
 
 ## Python API
 

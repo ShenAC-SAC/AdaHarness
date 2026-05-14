@@ -4,17 +4,29 @@ from adaharness.analysis.diagnostics import DiagnosticSignal
 from adaharness.analysis.fit import FitVerdict
 from adaharness.analysis.metrics import TraceMetrics
 from adaharness.analysis.policy_diff import PolicyChange
+from adaharness.analysis.result import AnalysisResult
 from adaharness.analysis.validation import TraceValidationWarning
 
 
 def render_analysis_report(
     *,
-    metrics: TraceMetrics,
-    fit_verdict: FitVerdict,
-    signals: tuple[DiagnosticSignal, ...],
-    changes: tuple[PolicyChange, ...],
+    result: AnalysisResult | None = None,
+    grouped_results: tuple[AnalysisResult, ...] = (),
+    metrics: TraceMetrics | None = None,
+    fit_verdict: FitVerdict | None = None,
+    signals: tuple[DiagnosticSignal, ...] | None = None,
+    changes: tuple[PolicyChange, ...] | None = None,
     trace_warnings: tuple[TraceValidationWarning, ...] = (),
 ) -> str:
+    if result is not None:
+        metrics = result.metrics
+        fit_verdict = result.fit_verdict
+        signals = result.signals
+        changes = result.changes
+        trace_warnings = result.trace_warnings
+    if metrics is None or fit_verdict is None or signals is None or changes is None:
+        raise ValueError("render_analysis_report requires either result or metrics, fit_verdict, signals, and changes")
+
     lines = [
         "# AdaHarness Drift Report",
         "",
@@ -88,8 +100,40 @@ def render_analysis_report(
         lines.append(f"  - Evidence count: {change.evidence_count}")
         for item in change.evidence:
             lines.append(f"  - Evidence: {item}")
+    if grouped_results:
+        lines.extend(["", "## Groups", ""])
+        for grouped_result in grouped_results:
+            lines.extend(_group_lines(grouped_result))
     return "\n".join(lines)
 
 
 def _format_controls(controls: tuple[str, ...]) -> str:
     return ", ".join(f"`{control}`" for control in controls) if controls else "none"
+
+
+def _group_lines(result: AnalysisResult) -> list[str]:
+    lines = [
+        f"### {_format_group(result.group)}",
+        "",
+        f"- Fit verdict: `{result.fit_verdict.status}`",
+        f"- Confidence: {result.fit_verdict.confidence}",
+        f"- Task count: {result.metrics.task_count}",
+        f"- Success rate: {result.metrics.success_rate:.2f}",
+        f"- Primary controls: {_format_controls(result.fit_verdict.primary_controls)}",
+    ]
+    if result.changes:
+        changes = ", ".join(
+            f"{change.field}: {change.from_value}->{change.to_value}"
+            for change in result.changes
+        )
+        lines.append(f"- Suggested changes: {changes}")
+    else:
+        lines.append("- Suggested changes: none")
+    lines.append("")
+    return lines
+
+
+def _format_group(group: dict[str, str]) -> str:
+    if not group:
+        return "Aggregate"
+    return "Group: " + ", ".join(f"{field}={value}" for field, value in group.items())
